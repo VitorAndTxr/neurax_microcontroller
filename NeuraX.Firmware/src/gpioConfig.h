@@ -1,0 +1,22 @@
+#include <Arduino.h>
+
+#define H_BRIDGE_INPUT_1 32
+#define H_BRIDGE_INPUT_2 33
+#define INCREMENT_POTENCIOMETER 25
+#define UP_DOWN_POTENCIOMETER 26
+#define CS_POTENCIOMETER 27
+
+void initGpio(void){
+
+    pinMode(H_BRIDGE_INPUT_1, OUTPUT);
+    pinMode(H_BRIDGE_INPUT_2, OUTPUT);
+    pinMode(INCREMENT_POTENCIOMETER, OUTPUT);
+    pinMode(UP_DOWN_POTENCIOMETER, OUTPUT);
+    pinMode(CS_POTENCIOMETER, OUTPUT);
+}
+
+
+
+
+
+

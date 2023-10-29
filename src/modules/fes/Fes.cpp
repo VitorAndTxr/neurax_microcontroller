@@ -1,11 +1,15 @@
 #include "Fes.h"
 #include "../debug/Debug.h"
 
+int Fes::fes_duration_ms = DEFAULT_STIMULI_DURATION;
+int Fes::pulse_width_ms = DEFAULT_PULSE_WIDTH;
+double Fes::frequency = DEFAULT_FREQUENCY;
+TaskHandle_t Fes::fes_loop_handle = NULL;
+
 Fes::Fes()
 {
     this->initGpio();
     this->setParameters();
-    fes_loop_handle = NULL;
 }
 
 Fes::~Fes()
@@ -78,13 +82,13 @@ inline void Fes::begin()
         1024, // Stack size (bytes in ESP32, words in FreeRTOS)
         this, // Parameter to pass to function
         20, // Task priority (0 to configmAx_PRIORITIES - 1)
-        &this->fes_loop_handle, // Task handle
+        &Fes::fes_loop_handle, // Task handle
         main_cpu) ;
 
     vTaskDelay(Fes::fes_duration_ms / portTICK_PERIOD_MS);
     // terminate the task after fes duration
-    vTaskDelete(this->fes_loop_handle);
-    this->fes_loop_handle = NULL; 
+    vTaskDelete(Fes::fes_loop_handle);
+    Fes::fes_loop_handle = NULL; 
 }
 
 

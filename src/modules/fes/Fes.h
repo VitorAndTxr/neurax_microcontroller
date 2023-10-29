@@ -35,5 +35,4 @@ public:
     static void fesLoopTaskWrapper(void *obj);
 };
 
-
 #endif

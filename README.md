@@ -63,4 +63,4 @@ Available configurations are:
 
 
 # Libraries
-Besides FreeRTOS, the [Filters library](https://dynamic-vacuum-96a.notion.site/NeuraEstimulator-Blog-5549a27e7c814812b0851a2f0c69d579?pvs=4) was also used.
+Besides FreeRTOS, the [Filters library](https://github.com/MartinBloedorn/libFilter) was also used.

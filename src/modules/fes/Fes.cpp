@@ -6,30 +6,6 @@ int Fes::pulse_width_ms = DEFAULT_PULSE_WIDTH;
 double Fes::frequency = DEFAULT_FREQUENCY;
 TaskHandle_t Fes::fes_loop_handle = NULL;
 
-void Fes::init()
-{
-    Fes::initGpio();
-    Fes::setParameters();
-}
-
-inline void Fes::initGpio()
-{
-#if FES_MODULE_ENABLE
-    pinMode(H_BRIDGE_INPUT_1, OUTPUT);
-    pinMode(H_BRIDGE_INPUT_2, OUTPUT);
-#endif
-}
-
-void Fes::increaseAmplitude(int steps)
-{
-    potentiometer.increase();
-}
-
-void Fes::decreaseAmplitude(int steps)
-{
-    potentiometer.decrease();
-}
-
 inline void negativeHBridge(){
 #if FES_MODULE_ENABLE
     digitalWrite(H_BRIDGE_INPUT_2, LOW);
@@ -49,6 +25,31 @@ inline void hBridgeReset(){
     digitalWrite(H_BRIDGE_INPUT_1, LOW);
     digitalWrite(H_BRIDGE_INPUT_2, LOW);
 #endif
+}
+
+void Fes::init()
+{
+    Fes::initGpio();
+    Fes::setParameters();
+    hBridgeReset();
+}
+
+inline void Fes::initGpio()
+{
+#if FES_MODULE_ENABLE
+    pinMode(H_BRIDGE_INPUT_1, OUTPUT);
+    pinMode(H_BRIDGE_INPUT_2, OUTPUT);
+#endif
+}
+
+void Fes::increaseAmplitude(int steps)
+{
+    potentiometer.increase();
+}
+
+void Fes::decreaseAmplitude(int steps)
+{
+    potentiometer.decrease();
 }
 
 void Fes::fesLoopTaskWrapper(void *obj) 

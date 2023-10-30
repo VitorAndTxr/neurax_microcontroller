@@ -16,8 +16,10 @@ public:
 
     SemgFilter() = delete;
 
-    static const Filter high_pass;
-    static const Filter low_pass;
+    static Filter high_pass;
+    static Filter low_pass;
+
+    static float filter(float value);
 };
 
 #endif

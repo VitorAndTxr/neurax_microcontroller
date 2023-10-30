@@ -6,15 +6,14 @@
 class Adc
 {
 private:
-    
-    const int adc_i2c_address = ADC_I2C_ADDR; // already set in lib
-    
-    Adafruit_ADS1115 ads;
-    bool error;
+    static const int adc_i2c_address; 
+    static Adafruit_ADS1115 ads;
+    static bool error;
 public:
-    Adc();
-    ~Adc();
-    int16_t getValue(int input);
+    Adc() = delete;
+    ~Adc() = delete;
+    static void init();
+    static int16_t getValue(int input);
 };
 
 #endif

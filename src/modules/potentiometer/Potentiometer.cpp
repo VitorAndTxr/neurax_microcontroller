@@ -2,9 +2,9 @@
 
 Potentiometer::Potentiometer()
 {
-    pinMode(INCREMENT_POTENTIOMETER, OUTPUT);
-    pinMode(UP_DOWN_POTENTIOMETER, OUTPUT);
-    pinMode(CS_POTENTIOMETER, OUTPUT);
+    pinMode(POTENTIOMETER_PIN_INCREMENT, OUTPUT);
+    pinMode(POTENTIOMETER_PIN_UP_DOWN, OUTPUT);
+    pinMode(POTENTIOMETER_PIN_CS, OUTPUT);
 
 }
 
@@ -15,16 +15,16 @@ Potentiometer::~Potentiometer()
 void Potentiometer::pulse(int steps) 
 {
     for(int i = 0; i< steps; i++){
-        digitalWrite(INCREMENT_POTENTIOMETER, HIGH);
+        digitalWrite(POTENTIOMETER_PIN_INCREMENT, HIGH);
         delayMicroseconds(10);
-        digitalWrite(INCREMENT_POTENTIOMETER, LOW);
+        digitalWrite(POTENTIOMETER_PIN_INCREMENT, LOW);
     }
 }
 
 inline void Potentiometer::increase(int steps) 
 {
-    digitalWrite(UP_DOWN_POTENTIOMETER, HIGH);
-    digitalWrite(CS_POTENTIOMETER, LOW);
+    digitalWrite(POTENTIOMETER_PIN_UP_DOWN, HIGH);
+    digitalWrite(POTENTIOMETER_PIN_CS, LOW);
     
     pulse(steps);
 
@@ -34,8 +34,8 @@ inline void Potentiometer::increase(int steps)
 
 inline void Potentiometer::decrease(int steps) 
 {
-    digitalWrite(UP_DOWN_POTENTIOMETER, LOW);
-    digitalWrite(CS_POTENTIOMETER, LOW);
+    digitalWrite(POTENTIOMETER_PIN_UP_DOWN, LOW);
+    digitalWrite(POTENTIOMETER_PIN_CS, LOW);
 
     pulse(steps);
 

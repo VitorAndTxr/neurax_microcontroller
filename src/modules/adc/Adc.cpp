@@ -1,21 +1,20 @@
 #include "Adc.h"
 
-Adc::Adc()
-{
-    error = false;
-    
-    ads.setDataRate(RATE_ADS1115_860SPS);
+const int Adc::adc_i2c_address = ADC_I2C_ADDR; // already set in lib
 
-    if (!ads.begin())
+bool Adc::error = false;
+Adafruit_ADS1115 Adc::ads;
+
+void Adc::init()
+{
+    Adc::ads.setDataRate(RATE_ADS1115_860SPS);
+
+    if (!Adc::ads.begin())
     {
         printDebug("Failed to initialize ADS1115.");
-        error = true;
+        Adc::error = true;
         while (1);
     }
-}
-
-Adc::~Adc()
-{
 }
 
 inline int16_t Adc::getValue(int input)

@@ -15,23 +15,24 @@ private:
     static TaskHandle_t fes_loop_handle;
 
 public:
-    Fes();
-    ~Fes();
-    void initGpio();
-    void setParameters(
+    Fes() = delete;
+    ~Fes() = delete;
+    static void init();
+    static void initGpio();
+    static void setParameters(
         int fes_duration_ms = DEFAULT_STIMULI_DURATION, 
         int pulse_width_ms = DEFAULT_PULSE_WIDTH,
         double frequency = DEFAULT_FREQUENCY
         );
-    void setFesDurationMs(int fes_duration_ms = DEFAULT_STIMULI_DURATION);
-    void setPulseWidthMs(int fes_duration_ms = DEFAULT_PULSE_WIDTH);
-    void setFrequency(double frequency = DEFAULT_FREQUENCY);
+    static void setFesDurationMs(int fes_duration_ms = DEFAULT_STIMULI_DURATION);
+    static void setPulseWidthMs(int fes_duration_ms = DEFAULT_PULSE_WIDTH);
+    static void setFrequency(double frequency = DEFAULT_FREQUENCY);
 
-    void begin();
-    void increaseAmplitude(int steps = DEFAULT_POTENTIOMETER_STEPS);
-    void decreaseAmplitude(int steps = DEFAULT_POTENTIOMETER_STEPS);
+    static void begin();
+    static void increaseAmplitude(int steps = DEFAULT_POTENTIOMETER_STEPS);
+    static void decreaseAmplitude(int steps = DEFAULT_POTENTIOMETER_STEPS);
 
-    void fesLoop();
+    static void fesLoop(void *obj);
     static void fesLoopTaskWrapper(void *obj);
 };
 

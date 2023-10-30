@@ -21,9 +21,3 @@ const Filter SemgFilter::low_pass(
     SemgFilter::sampling_time, 
     SemgFilter::order
 );
-
-SemgFilter::SemgFilter() {
-}
-
-SemgFilter::~SemgFilter() {
-}

@@ -1,16 +1,17 @@
 #include <Arduino.h>
 #include "modules/bluetooth/Bluetooth.h"
 #include "modules/fes/Fes.h"
+#include "modules/adc/Adc.h"
 
 static const Bluetooth bluetooth;
-static const Fes fes;
 
 void setup() {
-  // put your setup code here, to run once:
+  Adc::init();
+  Fes::init();
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
+
 }
 
 

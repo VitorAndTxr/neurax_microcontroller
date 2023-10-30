@@ -14,8 +14,7 @@ public:
     static const IIR::ORDER order; // Butterworth - Oder (OD1 to OD4)
     static const IIR::TYPE filter_type_high_pass;
 
-    SemgFilter();
-    ~SemgFilter();
+    SemgFilter() = delete;
 
     static const Filter high_pass;
     static const Filter low_pass;

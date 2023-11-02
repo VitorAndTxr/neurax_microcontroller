@@ -2,9 +2,9 @@
 
 float Semg::filtered_value[SEMG_SAMPLES_PER_VALUE] = {0};
 float Semg::mes[5] = {0};
-float Semg::gain = SEMG_DEFAULT_GAIN;
-float Semg::difficulty = SEMG_DIFFICULTY_DEFAULT;
-float Semg::threshold = 0;
+float SemgParameters::gain = SEMG_DEFAULT_GAIN;
+float SemgParameters::difficulty = SEMG_DIFFICULTY_DEFAULT;
+float SemgParameters::threshold = 0;
 float Semg::mes_a[2] = {0};
 float Semg::mes_b[2] = {0};
 float Semg::voltage = 0.0f;
@@ -15,21 +15,32 @@ void Semg::init() {
 }
 
 void Semg::increaseDifficulty(int increment) {
-    Semg::difficulty += increment;
-    Semg::difficulty = (Semg::difficulty > SEMG_DIFFICULTY_MAXIMUM) ? SEMG_DIFFICULTY_MAXIMUM : Semg::difficulty;
+    Semg::parameters.difficulty += increment;
+    Semg::parameters.difficulty = (Semg::parameters.difficulty > SEMG_DIFFICULTY_MAXIMUM) ? SEMG_DIFFICULTY_MAXIMUM : Semg::parameters.difficulty;
+
+    Semg::updateTriggerThreshold();
 }
 
 void Semg::decreaseDifficulty(int decrement) {
-    Semg::difficulty -= decrement;
-    Semg::difficulty = (Semg::difficulty < SEMG_DIFFICULTY_MINIMUM) ? SEMG_DIFFICULTY_MINIMUM : Semg::difficulty;
+    Semg::parameters.difficulty -= decrement;
+    Semg::parameters.difficulty = (Semg::parameters.difficulty < SEMG_DIFFICULTY_MINIMUM) ? SEMG_DIFFICULTY_MINIMUM : Semg::parameters.difficulty;
+
+    Semg::updateTriggerThreshold();
+}
+
+inline bool Semg::isInInterval(float lower_limit, float higher_limit){
+    return Semg::output >= Semg::parameters.threshold && Semg::output <= SEMG_TRIGGER_THRESHOLD_MAXIMUM;
 }
 
 bool Semg::isTrigger() {
-    return false;
+    return (isInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM) 
+        && !Fes::isOn());
 }
 
-void Semg::updateMovingThreshold() {
-    
+void Semg::updateTriggerThreshold() {
+    Semg::parameters.threshold = (1 + (Semg::parameters.difficulty / 100)); //* Semg::mes[0]; 
+    bool is_valid_low_threshold = Semg::parameters.threshold > SEMG_TRIGGER_THRESHOLD_MINIMUM;
+    Semg::parameters.threshold = is_valid_low_threshold ? Semg::parameters.threshold : SEMG_TRIGGER_THRESHOLD_MINIMUM;
 }
 
 bool Semg::impedanceTooLow() {
@@ -58,7 +69,7 @@ float Semg::getFilteredSample() {
         sum_of_averages += average_every_n_samples;
     }
 
-    return (Semg::gain * sum_of_averages) / 10.0f;
+    return (Semg::parameters.gain * sum_of_averages) / 10.0f;
 }
 
 float Semg::readSensor() {

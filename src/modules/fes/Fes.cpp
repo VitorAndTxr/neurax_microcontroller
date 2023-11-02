@@ -1,10 +1,12 @@
 #include "Fes.h"
 #include "../debug/Debug.h"
 
-int Fes::fes_duration_ms = DEFAULT_STIMULI_DURATION;
-int Fes::pulse_width_ms = DEFAULT_PULSE_WIDTH;
-double Fes::frequency = DEFAULT_FREQUENCY;
+int FesParameters::fes_duration_ms = DEFAULT_STIMULI_DURATION;
+int FesParameters::pulse_width_ms = DEFAULT_PULSE_WIDTH;
+double FesParameters::frequency = DEFAULT_FREQUENCY;
+
 TaskHandle_t Fes::fes_loop_handle = NULL;
+bool Fes::status = false;
 
 inline void negativeHBridge(){
 #if FES_MODULE_ENABLE
@@ -63,8 +65,10 @@ void Fes::fesLoopTaskWrapper(void *obj)
 
 void Fes::fesLoop(void *obj) 
 {
-    int single_pulse_duration_ms = Fes::pulse_width_ms / 2;
-    int remaining_time = (1 / (Fes::frequency)) - Fes::pulse_width_ms;
+    int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
+    int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
+
+    Fes::status = true;
     while (true)
     {
 #if FES_MODULE_ENABLE
@@ -93,27 +97,33 @@ inline void Fes::begin()
         &Fes::fes_loop_handle, // Task handle
         secondary_cpu) ;
 
-    vTaskDelay(Fes::fes_duration_ms / portTICK_PERIOD_MS);
+    vTaskDelay(Fes::parameters.fes_duration_ms / portTICK_PERIOD_MS);
     // terminate the task after fes duration
     vTaskDelete(Fes::fes_loop_handle);
     Fes::fes_loop_handle = NULL; 
+
+    Fes::status = false;
 }
 
 
 void Fes::setParameters(int fes_duration_ms, int pulse_width_ms, double frequency) {
-    Fes::fes_duration_ms = fes_duration_ms;
-    Fes::pulse_width_ms = pulse_width_ms;
-    Fes::frequency = frequency;
+    Fes::parameters.fes_duration_ms = fes_duration_ms;
+    Fes::parameters.pulse_width_ms = pulse_width_ms;
+    Fes::parameters.frequency = frequency;
 }
 
 void Fes::setFesDurationMs(int fes_duration_ms) {
-    Fes::fes_duration_ms = fes_duration_ms;
+    Fes::parameters.fes_duration_ms = fes_duration_ms;
 }
 
 void Fes::setPulseWidthMs(int pulse_width_ms) {
-    Fes::pulse_width_ms = pulse_width_ms;
+    Fes::parameters.pulse_width_ms = pulse_width_ms;
 }
 
 void Fes::setFrequency(double frequency) {
-    Fes::frequency = frequency;
+    Fes::parameters.frequency = frequency;
+}
+
+bool Fes::isOn() {
+    return Fes::status;
 }

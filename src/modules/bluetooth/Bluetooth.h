@@ -11,6 +11,7 @@ private:
 public:
     Bluetooth(/* args */);
     ~Bluetooth();
+    static bool isConnected();
 };
 
 Bluetooth::Bluetooth(/* args */)

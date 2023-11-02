@@ -60,6 +60,7 @@ Available configurations are:
 | SEMG_SAMPLES_PER_VALUE                  | 50            |                 |
 | SEMG_SAMPLES_PER_AVERAGE                | 10            |                 |
 | SEMG_LOW_IMPEDANCE_THRESHOLD            | 10            | Voltage above which the impedance is considered too low. Value in Volts.|
+| SEMG_TRIGGER_THRESHOLD_MINIMUM            | 3            | |
 
 
 # Libraries

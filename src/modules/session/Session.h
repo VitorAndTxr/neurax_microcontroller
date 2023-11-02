@@ -1,37 +1,39 @@
 #ifndef SESSION_MODULE
 #define SESSION_MODULE
 
-struct SessionDetails
+#include "../semg/Semg.h"
+#include "../fes/Fes.h"
+struct SessionStatus
 {
-    short maximumStimuliAmount;
-    short completeStimuliAmount;
-    short interruptedStimuliAmount;
-    short minimumSecondsBetweenStimuli;
+    static short completeStimuliAmount;
+    static short interruptedStimuliAmount;
+    static bool paused;
+    static bool ongoing;
+    static uint32_t time_of_last_trigger;
+    static uint32_t session_duration;
 };
 
+struct SessionParameters
+{
+    short maximumStimuliAmount;
+    short minimumSecondsBetweenStimuli;
+    uint32_t maximum_duration;
+    bool limited_by_duration;
+    bool limited_by_amount_of_trigger;
+};
 
 class Session
 {
 private:
-    Fes fes;
-    Semg semg;
-    SessionDetails details;
+    static SessionStatus details;
+    static SessionParameters parameters;
 public:
-    Session(/* args */);
-    ~Session();
-    start();
-    stop();
+    Session() = delete;
+    ~Session() = delete;
+    static void init();
+    static void start();
+    static void stop();
     
 };
-
-Session::Session(/* args */)
-{
-}
-
-Session::~Session()
-{
-}
-
-
 
 #endif

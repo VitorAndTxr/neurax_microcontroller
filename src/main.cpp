@@ -5,12 +5,11 @@
 #include "modules/semg/Semg.h"
 #include "modules/bluetooth/Bluetooth.h"
 
-static const Bluetooth bluetooth;
-
 void setup() {
   Adc::init();
   Fes::init();
   Semg::init();
+  Bluetooth::init();
 }
 
 void loop() {

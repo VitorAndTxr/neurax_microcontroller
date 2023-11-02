@@ -1,27 +1,21 @@
 #ifndef BLUETOOTH_MODULE
 #define BLUETOOTH_MODULE
 
+#include <HardwareSerial.h>
+#include <ArduinoJson.h>
 
 class Bluetooth
 {
 private:
-    //static Bluetooth* bluetooth_instance;
-
-    bool connected;
+    static bool connected;
 public:
-    Bluetooth(/* args */);
-    ~Bluetooth();
+    Bluetooth() = delete;
+    ~Bluetooth() = delete;
+    static void init();
+    static String readData();
+    static void sendData(const String &data);
+    static bool waitForConnection();
     static bool isConnected();
 };
-
-Bluetooth::Bluetooth(/* args */)
-{
-    this->connected = false;
-}
-
-Bluetooth::~Bluetooth()
-{
-}
-
 
 #endif

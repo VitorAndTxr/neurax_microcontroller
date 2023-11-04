@@ -8,6 +8,9 @@ double FesParameters::frequency = DEFAULT_FREQUENCY;
 TaskHandle_t Fes::fes_loop_handle = NULL;
 bool Fes::status = false;
 
+//bool emergency_stop = false;
+
+
 inline void negativeHBridge(){
 #if FES_MODULE_ENABLE
     digitalWrite(H_BRIDGE_INPUT_2, LOW);
@@ -69,6 +72,7 @@ void Fes::fesLoop(void *obj)
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
 
     Fes::status = true;
+    //while (!emergency_stop)
     while (true)
     {
 #if FES_MODULE_ENABLE

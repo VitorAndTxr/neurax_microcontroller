@@ -2,106 +2,138 @@
 #include "modules/bluetooth/Bluetooth.h"
 #include "modules/session/Session.h"
 
-DynamicJsonDocument jsonDoc(JSON_BUFFER_SIZE);
+DynamicJsonDocument message(JSON_BUFFER_SIZE);
 
 void MessageHandler::init() {
+    if(!Bluetooth::isConnected) {
+        Bluetooth::waitForConnection();
+    }
+}
+
+void MessageHandler::loop()
+{
     while (true) {
-        String data = Bluetooth::readData();
-        if (!data.isEmpty()) {
-            // Analisar o JSON
-            DeserializationError error = deserializeJson(jsonDoc, data);
-            // Verificar se houve erros no parsing do JSON
-            if (error) {
-                Serial.print("Erro no parsing do JSON: ");
-                Serial.println(error.c_str());
-            } else {
-                int code = jsonDoc["cd"];
-                String method = jsonDoc["mt"];
-                
-                // aqui não vai ter case 'w'
-                switch (code) {
-                    case 1:
-                        switch (method[0]) {
-                            // gyroscope data request from app
-                            case 'r':
-                                // send gyroscope data to app
-
-                                break;
-                            // gyroscope measurement request from app
-                            case 'x':
-                                // acquire gyroscope data and send to app
-                                break;
-                            // acknowledgement gyroscope data received from app
-                            case 'a':
-
-                                break;
-                            default:
-                                break;
-                        }
-                    break;
-                    case 2:
-                        switch (method[0]) {
-                            case 'w':
-                                float amplitude = jsonDoc["a"];
-                                float frequency = jsonDoc["f"];
-                                float pulse_width = jsonDoc["pw"];
-                                float difficulty = jsonDoc["df"];
-                                float pulse_duration = jsonDoc["pd"];
-                            
-                                break;
-                            case 'r':
-                                float amplitude = jsonDoc["a"];
-                                break;
-                            case 'x':
-                                //parameters
-                                float amplitude = jsonDoc["bd"]["parameters"]["a"];
-                                float frequency = jsonDoc["bd"]["parameters"]["f"];
-                                float pulse_width = jsonDoc["bd"]["parameters"]["pw"];
-                                float difficulty = jsonDoc["bd"]["parameters"]["df"];
-                                float pulse_duration = jsonDoc["bd"]["parameters"]["pd"];
-                                //status
-                                int complete_stimuli_amount = jsonDoc["bd"]["status"]["csa"];
-                                int interrupted_stimuli_amount = jsonDoc["bd"]["status"]["isa"];
-                                int time_last_trigger = jsonDoc["bd"]["status"]["tlt"];
-                                int session_duration = jsonDoc["bd"]["status"]["sd"];
-                                break;
-                            case 'a':
-                                // bluetooth handshake
-                                break;
-                            default:
-                                break;
-                        }
-                    break;
-                    case 3:
-                        switch (method[0]) {
-                            case 'r':
-                                break;
-                            case 'x':
-                                break;
-                            case 'a':
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                    case 4:
-                        switch (method[0]) {
-                            case 'r':
-                                // app receved gyroscope data
-                                break;
-                            case 'x':
-                                // app receved stimuli params and session status
-                                break;
-                            case 'a':
-                                break;
-                            default:
-                                break;
-                        }
-                        break;
-                    default:
-                        break;
-                }
-            }
+        if (Bluetooth::isConnected()) {
+            MessageHandler::handleIncomingMessages();
+            MessageHandler::handleOutgoingMessages();
+			// check connection! How?
         }
+        else {
+            Bluetooth::waitForConnection();
+        }
+    }
+}
+
+inline void MessageHandler::handleIncomingMessages() {
+    String data = Bluetooth::readData();
+    if (!data.isEmpty()) {
+        MessageHandler::interpretMessage(data);
+    }
+}
+
+inline void MessageHandler::handleOutgoingMessages() {
+
+}
+
+
+void MessageHandler::interpretMessage(String data)
+{
+    DeserializationError error = deserializeJson(message, data);
+
+    if (error) {
+        printDebug("Error parsing JSON: ");
+        printDebug(error.c_str());
+        return;
+    } 
+    
+    // aqui não vai ter case 'w'
+    switch (getMessageCode(message)) {
+        case GYROSCOPE_MESSAGE:
+            MessageHandler::handleGyroscopeMessage(message);
+            break;
+            
+        case (SESSION_COMMANDS::START):
+            Session::start();
+            break;
+
+        case SESSION_COMMANDS::STOP:
+            Session::stop();
+            break;
+
+        case SESSION_COMMANDS::PAUSE:
+            Session::pause();
+            break;
+
+        case SESSION_COMMANDS::RESUME:
+            Session::resume();
+            break;
+
+        case SESSION_COMMANDS::SINGLE_STIMULUS:
+            Session::singleStimulus();
+            break;
+
+        case SESSION_COMMANDS::PARAMETERS:
+            MessageHandler::handleSessionParametersMessage(message);
+            break;
+        
+        case NE_ACK:
+            break;
+
+        default:
+            break;
+    }
+}
+
+String MessageHandler::getMessageMethod(DynamicJsonDocument &message) {
+    return message[MESSAGE_KEYS::METHOD];
+}
+
+int MessageHandler::getMessageCode(DynamicJsonDocument &message) {
+    return message[MESSAGE_KEYS::CODE];
+}
+
+void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
+{
+    switch (getMessageMethod(message)[0]) {
+        case (MESSAGE_METHOD::READ):
+            Gyroscope::sendLastValue();
+            break;
+
+        case (MESSAGE_METHOD::EXECUTE):
+            Gyroscope::acquire();
+            Gyroscope::sendLastValue();
+            break;
+
+        case (MESSAGE_METHOD::ACK):
+            // acknowledgement gyroscope data received from app
+            break;
+        default:
+            break;
+    }
+}
+
+
+DynamicJsonDocument* getMessageParametersFragment(DynamicJsonDocument &message) {
+	DynamicJsonDocument parametersFragment(JSON_OBJECT_SIZE(5));
+  	parametersFragment = message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS];
+	return &parametersFragment;
+	//return message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS];
+}
+
+void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message) {
+    if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
+			DynamicJsonDocument* message_parameters = getMessageParametersFragment(message);
+
+            /* float amplitude = *message_parameters[MESSAGE_KEYS::parameters::AMPLITUDE];
+            float frequency = *message_parameters[MESSAGE_KEYS::parameters::FREQUENCY];
+            float pulse_width = *message_parameters[MESSAGE_KEYS::parameters::PULSE_WIDTH];
+            float difficulty = *message_parameters[MESSAGE_KEYS::parameters::DIFFICULTY];
+            float stimuli_duration = *message_parameters[MESSAGE_KEYS::parameters::STIMULI_DURATION]; */
+
+            //status
+            /* int complete_stimuli_amount = message[MESSAGE_KEYS::BODY]["status"]["csa"];
+            int interrupted_stimuli_amount = message[MESSAGE_KEYS::BODY]["status"]["isa"];
+            int time_last_trigger = message[MESSAGE_KEYS::BODY]["status"]["tlt"];
+            int session_duration = message[MESSAGE_KEYS::BODY]["status"]["sd"]; */
     }
 }

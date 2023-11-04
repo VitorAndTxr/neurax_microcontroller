@@ -7,8 +7,8 @@ struct SessionStatus
 {
     static short completeStimuliAmount;
     static short interruptedStimuliAmount;
-    static bool paused;
-    static bool ongoing;
+    static volatile bool paused;
+    static volatile bool ongoing;
     static uint32_t time_of_last_trigger;
     static uint32_t session_duration;
 };
@@ -25,15 +25,22 @@ struct SessionParameters
 class Session
 {
 private:
-    static SessionStatus details;
+    static SessionStatus status;
     static SessionParameters parameters;
+	TickType_t getTicksDelayBetweenStimuli();
+	static void loop();
+    static void resetSessionStatus(bool session_starting = true);
+	static void delayBetweenStimuli();
 public:
     Session() = delete;
     ~Session() = delete;
+
     static void init();
     static void start();
     static void stop();
-    
+    static void pause();
+    static void resume();
+    static void singleStimulus();
 };
 
 #endif

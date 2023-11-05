@@ -37,6 +37,7 @@ inline void MessageHandler::handleOutgoingMessages() {
     if (xQueueReceive(message_handler_queue, (void *)&message_to_send, 0) == pdTRUE) {
       String serialized_message;
 	  serializeJson(*message_to_send, serialized_message);
+	  // delete message to send
 	  Bluetooth::sendData(serialized_message);
     }
 }

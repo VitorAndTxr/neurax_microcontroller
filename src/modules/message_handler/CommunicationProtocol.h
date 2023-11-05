@@ -7,8 +7,8 @@ namespace SESSION_COMMANDS {
     const int PAUSE = 4;
     const int RESUME = 5;
     const int SINGLE_STIMULUS = 6;
-    const int STATUS = 8;
     const int PARAMETERS = 7;
+    const int STATUS = 8;
 };
 
 namespace MESSAGE_METHOD {
@@ -30,6 +30,9 @@ namespace MESSAGE_KEYS {
     	const char PULSE_WIDTH[] = "pw";
     	const char DIFFICULTY[] = "df";
     	const char STIMULI_DURATION[] = "pd";
+	};
+	namespace status {
+		const char COMPLETE_STIMULI_AMOUNT[] = "csa";
 	}
 }
 

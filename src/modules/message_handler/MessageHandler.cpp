@@ -32,7 +32,13 @@ inline void MessageHandler::handleIncomingMessages() {
 }
 
 inline void MessageHandler::handleOutgoingMessages() {
-
+	// See if there's a message in the queue (do not block)
+	DynamicJsonDocument* message_to_send;
+    if (xQueueReceive(message_handler_queue, (void *)&message_to_send, 0) == pdTRUE) {
+      String serialized_message;
+	  serializeJson(*message_to_send, serialized_message);
+	  Bluetooth::sendData(serialized_message);
+    }
 }
 
 
@@ -113,27 +119,23 @@ void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
 }
 
 
-DynamicJsonDocument* getMessageParametersFragment(DynamicJsonDocument &message) {
-	DynamicJsonDocument parametersFragment(JSON_OBJECT_SIZE(5));
-  	parametersFragment = message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS];
-	return &parametersFragment;
-	//return message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS];
+DynamicJsonDocument* MessageHandler::getMessageParametersFragment(DynamicJsonDocument &message) {
+	DynamicJsonDocument* parametersFragment = new DynamicJsonDocument(JSON_OBJECT_SIZE(5));
+    *parametersFragment = message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS];
+    return parametersFragment;
 }
 
 void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message) {
     if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
 			DynamicJsonDocument* message_parameters = getMessageParametersFragment(message);
 
-            /* float amplitude = *message_parameters[MESSAGE_KEYS::parameters::AMPLITUDE];
-            float frequency = *message_parameters[MESSAGE_KEYS::parameters::FREQUENCY];
-            float pulse_width = *message_parameters[MESSAGE_KEYS::parameters::PULSE_WIDTH];
-            float difficulty = *message_parameters[MESSAGE_KEYS::parameters::DIFFICULTY];
-            float stimuli_duration = *message_parameters[MESSAGE_KEYS::parameters::STIMULI_DURATION]; */
+            float amplitude = (*message_parameters)[MESSAGE_KEYS::parameters::AMPLITUDE];
+            float frequency = (*message_parameters)[MESSAGE_KEYS::parameters::FREQUENCY];
+            float pulse_width = (*message_parameters)[MESSAGE_KEYS::parameters::PULSE_WIDTH];
+            float difficulty = (*message_parameters)[MESSAGE_KEYS::parameters::DIFFICULTY];
+            float stimuli_duration = (*message_parameters)[MESSAGE_KEYS::parameters::STIMULI_DURATION];
 
-            //status
-            /* int complete_stimuli_amount = message[MESSAGE_KEYS::BODY]["status"]["csa"];
-            int interrupted_stimuli_amount = message[MESSAGE_KEYS::BODY]["status"]["isa"];
-            int time_last_trigger = message[MESSAGE_KEYS::BODY]["status"]["tlt"];
-            int session_duration = message[MESSAGE_KEYS::BODY]["status"]["sd"]; */
+			// TODO
+			// set the fes and session parameters
     }
 }

@@ -1,12 +1,14 @@
 #ifndef SESSION_MODULE
 #define SESSION_MODULE
 
+#include <ArduinoJson.h>
 #include "../semg/Semg.h"
 #include "../fes/Fes.h"
+#include "../message_handler/MessageHandler.h"
 struct SessionStatus
 {
-    static short completeStimuliAmount;
-    static short interruptedStimuliAmount;
+    static short complete_stimuli_amount;
+    static short interrupted_stimuli_amount;
     static volatile bool paused;
     static volatile bool ongoing;
     static uint32_t time_of_last_trigger;
@@ -41,6 +43,7 @@ public:
     static void pause();
     static void resume();
     static void singleStimulus();
+	static void sendSessionStatus();
 };
 
 #endif

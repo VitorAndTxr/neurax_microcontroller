@@ -4,6 +4,7 @@
 #include "../adc/Adc.h"
 #include "../adc/Adc.h"
 
+
 class Battery
 {
 private:

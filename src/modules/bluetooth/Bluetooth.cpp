@@ -7,14 +7,18 @@ void Bluetooth::init() {
     BTSerial.begin(9600);  // Bluetooth module baud rate
     BTSerial.write(BLUETOOTH_AT_SET_MODULE_NAME);
     BTSerial.write(BLUETOOTH_AT_SET_BAUDRATE_115200);
-    BTSerial.end(true);
-    BTSerial.begin(115200);
+    /* BTSerial.end(true);
+    BTSerial.begin(115200); */
     pinMode(BLUETOOTH_MODULE_STATUS_PIN, INPUT); 
-    while (!Bluetooth::isConnected()) {}
+    Bluetooth::waitForConnection();
 }
 
 bool Bluetooth::isConnected() {
     return digitalRead(BLUETOOTH_MODULE_STATUS_PIN);
+}
+
+void Bluetooth::waitForConnection() {
+	while (!Bluetooth::isConnected()) {}
 }
 
 String Bluetooth::readData() {

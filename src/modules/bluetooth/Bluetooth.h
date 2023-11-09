@@ -15,6 +15,7 @@ public:
     static String readData();
     static void sendData(const String &data);
     static bool isConnected();
+	static void waitForConnection();
 };
 
 #endif

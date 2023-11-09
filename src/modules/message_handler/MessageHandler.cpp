@@ -3,11 +3,18 @@
 #include "modules/session/Session.h"
 
 DynamicJsonDocument message(JSON_BUFFER_SIZE);
+const int MessageHandler::queue_size = 10;    
+
 
 void MessageHandler::init() {
     if(!Bluetooth::isConnected) {
         Bluetooth::waitForConnection();
     }
+	// TODO trocar uint32 pra ponteiro pra msg
+	message_handler_queue = xQueueCreate(MessageHandler::queue_size, sizeof(uint32_t*));
+	if (message_handler_queue == NULL) {
+		printDebug("QueueHandler: Failed to create queue.");
+	}
 }
 
 void MessageHandler::loop()
@@ -16,12 +23,19 @@ void MessageHandler::loop()
         if (Bluetooth::isConnected()) {
             MessageHandler::handleIncomingMessages();
             MessageHandler::handleOutgoingMessages();
-			// check connection! How?
         }
         else {
             Bluetooth::waitForConnection();
         }
     }
+}
+
+bool MessageHandler::addMessageToQueue() {
+	if (xQueueSend(queueHandle, &obj, ticksToWait) != pdPASS) {
+            printDebug("QueueHandler: Failed to send object to queue");
+            return false;
+        }
+	return true;
 }
 
 inline void MessageHandler::handleIncomingMessages() {

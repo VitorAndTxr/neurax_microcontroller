@@ -46,7 +46,7 @@ void Session::sendSessionStatus( ){
 
 	StaticJsonDocument<200> message_document;
 	
-	message_document[MESSAGE_KEYS::CODE] = SESSION_COMMANDS::STATUS;
+	/*message_document[MESSAGE_KEYS::CODE] = SESSION_COMMANDS::STATUS;
 	message_document[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
 
 	JsonObject status_message_body = 
@@ -66,7 +66,7 @@ void Session::sendSessionStatus( ){
 	String serialized_message;
 	serializeJson(message_document, serialized_message);
 
-	
+	*/
 	//status
 /* 	status_message[MESSAGE_KEYS::BODY]["status"]["csa"] = Session::status.complete_stimuli_amount;
 	status_message[MESSAGE_KEYS::BODY]["status"]["isa"] = Session::status.interrupted_stimuli_amount;

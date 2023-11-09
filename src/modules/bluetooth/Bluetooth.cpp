@@ -8,8 +8,13 @@ void Bluetooth::init() {
     BTSerial.write(BLUETOOTH_AT_SET_MODULE_NAME);
     BTSerial.write(BLUETOOTH_AT_SET_BAUDRATE_115200);
     BTSerial.end(true);
-    BTSerial.begin(115200);  
-    Bluetooth::waitForConnection();
+    BTSerial.begin(115200);
+    pinMode(BLUETOOTH_MODULE_STATUS_PIN, INPUT); 
+    while (!Bluetooth::isConnected()) {}
+}
+
+bool Bluetooth::isConnected() {
+    return digitalRead(BLUETOOTH_MODULE_STATUS_PIN);
 }
 
 String Bluetooth::readData() {
@@ -19,33 +24,6 @@ String Bluetooth::readData() {
         return data;
     }
     return data;
-}
-
-bool Bluetooth::waitForConnection() {
-    DynamicJsonDocument jsonDoc(JSON_BUFFER_SIZE);
-
-    while (!Bluetooth::connected){
-        String handshake = readData();
-
-        DeserializationError error = deserializeJson(jsonDoc, handshake);
-
-        if (error) {
-            Serial.print("Erro no parsing do JSON: ");
-            Serial.println(error.c_str());
-        } 
-        else {
-            int code = jsonDoc["code"];
-            if (code == BLUETOOTH_JSON_CONNECTED_CODE) {
-                Bluetooth::connected = true;
-            }
-        }
-    }
-    
-    return true;;
-}
-
-bool Bluetooth::isConnected() {
-    return Bluetooth::connected;
 }
 
 void Bluetooth::sendData(const String &data) {

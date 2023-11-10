@@ -3,7 +3,8 @@
 #include "modules/session/Session.h"
 
 DynamicJsonDocument message(JSON_BUFFER_SIZE);
-const int MessageHandler::queue_size = 10;    
+const int MessageHandler::queue_size = 10;
+QueueHandle_t MessageHandler::message_handler_queue = NULL; 
 
 
 void MessageHandler::init() {
@@ -11,7 +12,7 @@ void MessageHandler::init() {
         Bluetooth::waitForConnection();
     }
 	// TODO trocar uint32 pra ponteiro pra msg
-	message_handler_queue = xQueueCreate(MessageHandler::queue_size, sizeof(uint32_t*));
+	message_handler_queue = xQueueCreate(queue_size, sizeof(uint32_t*));
 	if (message_handler_queue == NULL) {
 		printDebug("QueueHandler: Failed to create queue.");
 	}
@@ -30,30 +31,35 @@ void MessageHandler::loop()
     }
 }
 
-bool MessageHandler::addMessageToQueue() {
-	if (xQueueSend(queueHandle, &obj, ticksToWait) != pdPASS) {
-            printDebug("QueueHandler: Failed to send object to queue");
-            return false;
-        }
+bool MessageHandler::addMessageToQueue(String &data) {
+	if (xQueueSend(message_handler_queue, &data, portMAX_DELAY) != pdPASS) {
+        printDebug("QueueHandler: Failed to message object to queue");
+        return false;
+    }
 	return true;
+}
+
+bool MessageHandler::readMessageFromQueue(String &data) {
+    return (xQueueReceive(message_handler_queue, &data, portMAX_DELAY) == pdPASS);
 }
 
 inline void MessageHandler::handleIncomingMessages() {
     String data = Bluetooth::readData();
     if (!data.isEmpty()) {
         MessageHandler::interpretMessage(data);
+        //addMessageToQueue(data);
     }
 }
 
 inline void MessageHandler::handleOutgoingMessages() {
 	// See if there's a message in the queue (do not block)
-	DynamicJsonDocument* message_to_send;
-    if (xQueueReceive(message_handler_queue, (void *)&message_to_send, 0) == pdTRUE) {
-      String serialized_message;
-	  serializeJson(*message_to_send, serialized_message);
-	  // delete message to send
-	  Bluetooth::sendData(serialized_message);
-    }
+	// DynamicJsonDocument* message_to_send;
+    // if (xQueueReceive(message_handler_queue, (void *)&message_to_send, 0) == pdTRUE) {
+    //   String serialized_message;
+	//   serializeJson(*message_to_send, serialized_message);
+	//   // delete message to send
+	//   Bluetooth::sendData(serialized_message);
+    // }
 }
 
 

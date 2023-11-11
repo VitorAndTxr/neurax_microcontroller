@@ -31,35 +31,32 @@ void MessageHandler::loop()
     }
 }
 
-bool MessageHandler::addMessageToQueue(String &data) {
-	if (xQueueSend(message_handler_queue, &data, portMAX_DELAY) != pdPASS) {
+bool MessageHandler::addMessageToQueue(const DynamicJsonDocument& message) {
+	if (xQueueSend(message_handler_queue, &message, portMAX_DELAY) != pdPASS) {
         printDebug("QueueHandler: Failed to message object to queue");
         return false;
     }
 	return true;
 }
 
-bool MessageHandler::readMessageFromQueue(String &data) {
-    return (xQueueReceive(message_handler_queue, &data, portMAX_DELAY) == pdPASS);
+bool MessageHandler::readMessageFromQueue(DynamicJsonDocument& message) {
+    return (xQueueReceive(message_handler_queue, &message, portMAX_DELAY) == pdPASS);
 }
 
 inline void MessageHandler::handleIncomingMessages() {
     String data = Bluetooth::readData();
     if (!data.isEmpty()) {
         MessageHandler::interpretMessage(data);
-        //addMessageToQueue(data);
     }
 }
 
 inline void MessageHandler::handleOutgoingMessages() {
-	// See if there's a message in the queue (do not block)
-	// DynamicJsonDocument* message_to_send;
-    // if (xQueueReceive(message_handler_queue, (void *)&message_to_send, 0) == pdTRUE) {
-    //   String serialized_message;
-	//   serializeJson(*message_to_send, serialized_message);
-	//   // delete message to send
-	//   Bluetooth::sendData(serialized_message);
-    // }
+	DynamicJsonDocument message_to_send(1024);
+    if (readMessageFromQueue(message_to_send)) {
+        String serialized_message;
+        serializeJson(message_to_send, serialized_message);
+        //Bluetooth::sendData(serialized_message);
+    }
 }
 
 

@@ -30,8 +30,8 @@ public:
     ~MessageHandler() = delete;
     static void init();
     static void loop();
-    static bool addMessageToQueue(String &data);
-    static bool readMessageFromQueue(String &data);
+    static bool addMessageToQueue(const DynamicJsonDocument& message);
+    static bool readMessageFromQueue(DynamicJsonDocument& message);
 };
 
 #endif

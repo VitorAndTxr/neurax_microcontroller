@@ -12,10 +12,10 @@ namespace SESSION_COMMANDS {
 };
 
 namespace MESSAGE_METHOD {
-    const char READ = 'r';
-    const char WRITE = 'w';
-    const char EXECUTE = 'x';
-    const char ACK = 'a';
+    const int READ = 'r';
+    const int WRITE = 'w';
+    const int EXECUTE = 'x';
+    const int ACK = 'a';
 }
 
 namespace MESSAGE_KEYS {

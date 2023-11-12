@@ -8,10 +8,11 @@ float SemgParameters::threshold = 0;
 float Semg::mes_a[2] = {0};
 float Semg::mes_b[2] = {0};
 float Semg::voltage = 0.0f;
+float Semg::output = 0.0f;
 
 void Semg::init() {
     pinMode(SEMG_ENABLE_PIN, OUTPUT);
-    digitalWrite(SEMG_ENABLE_PIN, LOW);
+    Semg::disableSensor();
 }
 
 void Semg::increaseDifficulty(int increment) {
@@ -28,12 +29,12 @@ void Semg::decreaseDifficulty(int decrement) {
     Semg::updateTriggerThreshold();
 }
 
-inline bool Semg::isInInterval(float lower_limit, float higher_limit){
+inline bool Semg::outputIsInInterval(float lower_limit, float higher_limit){
     return Semg::output >= Semg::parameters.threshold && Semg::output <= SEMG_TRIGGER_THRESHOLD_MAXIMUM;
 }
 
 bool Semg::isTrigger() {
-    return (isInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM) 
+    return (outputIsInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM) 
         && !Fes::isOn());
 }
 
@@ -73,18 +74,28 @@ float Semg::getFilteredSample() {
 }
 
 float Semg::readSensor() {
+    Semg::enableSensor();
     Semg::voltage = Adc::getValue(SEMG_ADC_PIN);
+    Semg::disableSensor();
     return Semg::voltage;
 }
 
 float Semg::acquireAverage(int readings_amount) {
-    for (int i = 0; i < readings_amount; i++)
-    {
+	Semg::output = 0;
+    for (int i = 0; i < readings_amount; i++) {
         Semg::output += Semg::getFilteredSample();
     }
     Semg::output /= readings_amount;
     
     return Semg::output;
+}
+
+void Semg::enableSensor() {
+    digitalWrite(SEMG_ENABLE_PIN, HIGH);
+}
+
+void Semg::disableSensor() {
+    digitalWrite(SEMG_ENABLE_PIN, LOW);
 }
 
 

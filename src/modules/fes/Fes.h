@@ -40,6 +40,7 @@ public:
     static void fesLoopTaskWrapper(void *obj);
     static bool isOn();
     static FesParameters parameters;
+	static bool emergency_stop;
 };
 
 #endif

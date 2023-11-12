@@ -4,7 +4,7 @@
 typedef float angle;
 #include <ArduinoJson.h>
 #include <Adafruit_MPU6050.h>
-#include "../debug/debug.h"
+#include "../debug/Debug.h"
 #include "../message_handler/MessageHandler.h"
 
 class Gyroscope

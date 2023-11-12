@@ -1,6 +1,6 @@
 #include <iostream>
 #include <string>
-#include "debug.h"
+#include "Debug.h"
 
 void printDebug(const std::string& inputString)
 {

@@ -2,7 +2,7 @@
 #define POTENTIOMETER_MODULE
 
 #include <Arduino.h>
-#include "../debug/debug.h"
+#include "../debug/Debug.h"
 
 class Potentiometer
 {

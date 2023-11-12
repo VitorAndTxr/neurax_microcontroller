@@ -1,4 +1,3 @@
-#include "session.h"
 #include "Session.h"
 
 short SessionStatus::complete_stimuli_amount = 0;

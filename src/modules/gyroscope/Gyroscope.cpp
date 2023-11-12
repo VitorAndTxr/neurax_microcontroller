@@ -11,17 +11,14 @@ float Gyroscope::last_value = 0.0;
 
 void Gyroscope::init()
 {
-
     if (!mpu.begin()) {
         printDebug("MPU6050 connection failed. Please check your connections.");
         Gyroscope::error = true;
         while (1);
     }
-
 }
 
 void Gyroscope::calibrateMPU6050() {
-
   for (int i = 0; i < 1000; i++) {
     sensors_event_t accel, gyro, temp;
     mpu.getEvent(&accel, &gyro, &temp);
@@ -61,7 +58,7 @@ float Gyroscope::gyroscopeRoutine(){
     if ((initial_position - aux_value) < 0){
         movement_result = 0;
     }
-    else{
+    else {
         movement_result = initial_position - aux_value;
     }
 
@@ -76,10 +73,9 @@ float Gyroscope::gyroscopeRoutine(){
     }
     last_value = movement_result;
     return movement_result;
-
 }
 
-void Gyroscope::testGyroscope(){
+void Gyroscope::testGyroscope() {
     printDebug("testing gyroscope");
     //calibra
     Gyroscope::calibrateMPU6050();
@@ -88,8 +84,6 @@ void Gyroscope::testGyroscope(){
     float position;
     position = Gyroscope::calculatePitch();
     printDebug("testing gyroscope ending");
-
-
 }
 
 angle Gyroscope::getLastValue(){
@@ -110,4 +104,3 @@ void Gyroscope::sendLastValue(){
 
     MessageHandler::addMessageToQueue(message_document);
 }
-

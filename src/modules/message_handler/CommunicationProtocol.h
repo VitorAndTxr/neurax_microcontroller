@@ -19,21 +19,25 @@ namespace MESSAGE_METHOD {
 }
 
 namespace MESSAGE_KEYS {
-	const char CODE[] = "cd";
+    const char ANGLE[] = "a";
+    const char CODE[] = "cd";
     const char METHOD[] = "mt";
     const char BODY[] = "bd";
     const char PARAMETERS[] = "parameters";
     const char STATUS[] = "status";
-	namespace parameters {
-    	const char AMPLITUDE[] = "a";
-    	const char FREQUENCY[] = "f";
-    	const char PULSE_WIDTH[] = "pw";
-    	const char DIFFICULTY[] = "df";
-    	const char STIMULI_DURATION[] = "pd";
-	};
-	namespace status {
-		const char COMPLETE_STIMULI_AMOUNT[] = "csa";
-	}
+    namespace parameters {
+        const char AMPLITUDE[] = "a";
+        const char FREQUENCY[] = "f";
+        const char PULSE_WIDTH[] = "pw";
+        const char DIFFICULTY[] = "df";
+        const char STIMULI_DURATION[] = "pd";
+    };
+    namespace status {
+        const char COMPLETE_STIMULI_AMOUNT[] = "csa";
+        const char INTERRUPTED_STIMULI_AMOUNT[] = "isa";
+        const char TIME_OF_LAST_TRIGGER[] = "tlt";
+        const char SESSION_DURATION[] = "sd";
+    }
 }
 
 #define GYROSCOPE_MESSAGE 1

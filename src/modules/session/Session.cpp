@@ -41,16 +41,15 @@ void Session::resume() {
 void Session::singleStimulus() {
 }
 
-void Session::sendSessionStatus( ){
-	DynamicJsonDocument status_message(JSON_OBJECT_SIZE(11));
+void Session::sendSessionStatus(){
+	DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(14));
 
-	StaticJsonDocument<200> message_document;
 	
-	message_document[MESSAGE_KEYS::CODE] = SESSION_COMMANDS::STATUS;
-	message_document[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
+	(*message_document)[MESSAGE_KEYS::CODE] = SESSION_COMMANDS::STATUS;
+	(*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
 
 	JsonObject status_message_body = 
-		message_document.createNestedObject(MESSAGE_KEYS::BODY);
+		(*message_document).createNestedObject(MESSAGE_KEYS::BODY);
 
 	JsonObject status_message_parameters = 
 		status_message_body.createNestedObject(MESSAGE_KEYS::PARAMETERS);
@@ -59,18 +58,27 @@ void Session::sendSessionStatus( ){
 		status_message_body.createNestedObject(MESSAGE_KEYS::STATUS);
 
 
-	status_message_parameters[MESSAGE_KEYS::status::COMPLETE_STIMULI_AMOUNT] = 
+	status_message_status[MESSAGE_KEYS::status::COMPLETE_STIMULI_AMOUNT] = 
 		Session::status.complete_stimuli_amount;
+	status_message_status[MESSAGE_KEYS::status::INTERRUPTED_STIMULI_AMOUNT] = 
+		Session::status.interrupted_stimuli_amount;
+	status_message_status[MESSAGE_KEYS::status::TIME_OF_LAST_TRIGGER] = 
+		Session::status.time_of_last_trigger;
+	status_message_status[MESSAGE_KEYS::status::SESSION_DURATION] = 
+		Session::status.session_duration;
 
+	status_message_parameters[MESSAGE_KEYS::parameters::AMPLITUDE] = 
+		Fes::parameters.amplitude;
+	status_message_parameters[MESSAGE_KEYS::parameters::FREQUENCY] =
+		Fes::parameters.frequency;
+	status_message_parameters[MESSAGE_KEYS::parameters::PULSE_WIDTH] =
+		Fes::parameters.pulse_width_ms;
+	status_message_parameters[MESSAGE_KEYS::parameters::DIFFICULTY] =
+		Semg::parameters.difficulty;
+	status_message_parameters[MESSAGE_KEYS::parameters::STIMULI_DURATION] =
+		Fes::parameters.fes_duration_ms;
 
-	String serialized_message;
-	serializeJson(message_document, serialized_message);
-
-	//status
- 	status_message[MESSAGE_KEYS::BODY]["status"]["csa"] = Session::status.complete_stimuli_amount;
-	status_message[MESSAGE_KEYS::BODY]["status"]["isa"] = Session::status.interrupted_stimuli_amount;
-	status_message[MESSAGE_KEYS::BODY]["status"]["tlt"] = Session::status.time_of_last_trigger;
-	status_message[MESSAGE_KEYS::BODY]["status"]["sd"] = Session::status.session_duration;
+	MessageHandler::addMessageToQueue(message_document);
 }
 
 TickType_t Session::getTicksDelayBetweenStimuli() {

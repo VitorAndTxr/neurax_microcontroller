@@ -2,8 +2,10 @@
 #define GYROSCOPE_MODULE
 
 typedef float angle;
+#include <ArduinoJson.h>
 #include <Adafruit_MPU6050.h>
 #include "../debug/debug.h"
+#include "../message_handler/MessageHandler.h"
 
 class Gyroscope
 {
@@ -14,7 +16,6 @@ public:
     Gyroscope() = delete;
     ~Gyroscope() = delete;
     static void init();
-    static angle acquire();
     static angle getLastValue();
     static void sendLastValue();
 
@@ -25,6 +26,7 @@ public:
 public:
     static void calibrateMPU6050();
     static float calculatePitch();
+    //TODO mutex needed?
     static float gyroscopeRoutine(); 
     static void testGyroscope();
 };

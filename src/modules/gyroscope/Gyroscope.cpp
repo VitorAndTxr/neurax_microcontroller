@@ -7,6 +7,7 @@ Adafruit_MPU6050 Gyroscope::mpu;
 int minAccelY, maxAccelY;
 double currentPitch, previousPitch;
 unsigned long previousTime;
+float Gyroscope::last_value = 0.0;
 
 void Gyroscope::init()
 {
@@ -73,6 +74,7 @@ float Gyroscope::gyroscopeRoutine(){
         // Add some delay to avoid constant checking, adjust as needed
         //delay(100); 
     }
+    last_value = movement_result;
     return movement_result;
 
 }
@@ -90,15 +92,22 @@ void Gyroscope::testGyroscope(){
 
 }
 
-angle Gyroscope::acquire(){
-    return 90;
-}
-
 angle Gyroscope::getLastValue(){
-    return 90;
+    return last_value;
 }
 
 void Gyroscope::sendLastValue(){
+    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(3));
 
+    (*message_document)[MESSAGE_KEYS::CODE] = GYROSCOPE_MESSAGE;
+    (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
+
+    JsonObject body = 
+      (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
+
+    body[MESSAGE_KEYS::ANGLE] = 
+      last_value;
+
+    MessageHandler::addMessageToQueue(message_document);
 }
 

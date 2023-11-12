@@ -31,16 +31,16 @@ void MessageHandler::loop()
     }
 }
 
-bool MessageHandler::addMessageToQueue(const DynamicJsonDocument& message) {
-	if (xQueueSend(message_handler_queue, &message, portMAX_DELAY) != pdPASS) {
+bool MessageHandler::addMessageToQueue(const DynamicJsonDocument* message) {
+	if (xQueueSend(message_handler_queue, message, portMAX_DELAY) != pdPASS) {
         printDebug("QueueHandler: Failed to message object to queue");
         return false;
     }
 	return true;
 }
 
-bool MessageHandler::readMessageFromQueue(DynamicJsonDocument& message) {
-    return (xQueueReceive(message_handler_queue, &message, portMAX_DELAY) == pdPASS);
+bool MessageHandler::readMessageFromQueue(DynamicJsonDocument* message) {
+    return (xQueueReceive(message_handler_queue, message, portMAX_DELAY) == pdPASS);
 }
 
 inline void MessageHandler::handleIncomingMessages() {
@@ -51,12 +51,13 @@ inline void MessageHandler::handleIncomingMessages() {
 }
 
 inline void MessageHandler::handleOutgoingMessages() {
-	DynamicJsonDocument message_to_send(1024);
+	DynamicJsonDocument* message_to_send = NULL;
     if (readMessageFromQueue(message_to_send)) {
         String serialized_message;
-        serializeJson(message_to_send, serialized_message);
-        //Bluetooth::sendData(serialized_message);
+        serializeJson(*message_to_send, serialized_message);
+        Bluetooth::sendData(serialized_message);
     }
+    delete message_to_send;
 }
 
 
@@ -106,6 +107,7 @@ void MessageHandler::interpretMessage(String data)
         default:
             break;
     }
+    message.clear();
 }
 
 String MessageHandler::getMessageMethod(DynamicJsonDocument &message) {
@@ -124,7 +126,7 @@ void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
             break;
 
         case (MESSAGE_METHOD::EXECUTE):
-            Gyroscope::acquire();
+            Gyroscope::gyroscopeRoutine();
             Gyroscope::sendLastValue();
             break;
 
@@ -137,23 +139,22 @@ void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
 }
 
 
-DynamicJsonDocument* MessageHandler::getMessageParametersFragment(DynamicJsonDocument &message) {
-	DynamicJsonDocument* parametersFragment = new DynamicJsonDocument(JSON_OBJECT_SIZE(5));
-    *parametersFragment = message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS];
-    return parametersFragment;
-}
-
 void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message) {
     if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
-			DynamicJsonDocument* message_parameters = getMessageParametersFragment(message);
+            JsonObject statusObj = message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS].as<JsonObject>();
 
-            float amplitude = (*message_parameters)[MESSAGE_KEYS::parameters::AMPLITUDE];
-            float frequency = (*message_parameters)[MESSAGE_KEYS::parameters::FREQUENCY];
-            float pulse_width = (*message_parameters)[MESSAGE_KEYS::parameters::PULSE_WIDTH];
-            float difficulty = (*message_parameters)[MESSAGE_KEYS::parameters::DIFFICULTY];
-            float stimuli_duration = (*message_parameters)[MESSAGE_KEYS::parameters::STIMULI_DURATION];
 
-			// TODO
-			// set the fes and session parameters
+            float amplitude = statusObj[MESSAGE_KEYS::parameters::AMPLITUDE];
+            float frequency = statusObj[MESSAGE_KEYS::parameters::FREQUENCY];
+            float pulse_width = statusObj[MESSAGE_KEYS::parameters::PULSE_WIDTH];
+            float difficulty = statusObj[MESSAGE_KEYS::parameters::DIFFICULTY];
+            float fes_duration = statusObj[MESSAGE_KEYS::parameters::STIMULI_DURATION];
+
+            Fes::parameters.amplitude = amplitude;
+            Fes::parameters.frequency = frequency;
+            Fes::parameters.pulse_width_ms = pulse_width;
+            Fes::parameters.fes_duration_ms = fes_duration;
+
+            Semg::parameters.difficulty = difficulty;
     }
 }

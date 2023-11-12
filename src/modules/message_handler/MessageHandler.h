@@ -22,7 +22,6 @@ private:
     static void handleSessionParametersMessage(DynamicJsonDocument &message);
     static int getMessageCode(DynamicJsonDocument &message);
     static String getMessageMethod(DynamicJsonDocument &message);
-    static DynamicJsonDocument* getMessageParametersFragment(DynamicJsonDocument &message);
     static void handleIncomingMessages();
     static void handleOutgoingMessages();
 public:
@@ -30,8 +29,8 @@ public:
     ~MessageHandler() = delete;
     static void init();
     static void loop();
-    static bool addMessageToQueue(const DynamicJsonDocument& message);
-    static bool readMessageFromQueue(DynamicJsonDocument& message);
+    static bool addMessageToQueue(const DynamicJsonDocument* message);
+    static bool readMessageFromQueue(DynamicJsonDocument* message);
 };
 
 #endif

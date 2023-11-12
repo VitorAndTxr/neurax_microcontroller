@@ -8,12 +8,12 @@
 struct FesParameters {
     static int fes_duration_ms;
     static int pulse_width_ms;
-    static double frequency;
+    static float frequency;
+    static float amplitude;
 };
 class Fes
 {
 private:
-    static FesParameters parameters;
     static Potentiometer potentiometer;
     static TaskHandle_t fes_loop_handle;
     static bool status;
@@ -39,6 +39,7 @@ public:
     static void fesLoop(void *obj);
     static void fesLoopTaskWrapper(void *obj);
     static bool isOn();
+    static FesParameters parameters;
 };
 
 #endif

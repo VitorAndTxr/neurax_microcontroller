@@ -77,7 +77,7 @@ Depending on the message's code and method, the message may contain a body with 
     <td>x</td>
     <td>App</td>
     <td>ESP32</td>
-    <td>m: maximum session duration, min (int)</td>
+    <td>No body.</td>
     <td></td>
   </tr>
   <tr>

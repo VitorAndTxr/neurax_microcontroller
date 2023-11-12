@@ -3,10 +3,16 @@ name: PlatformIO CI
 on: [push]
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
 
     steps:
+      - uses: actions/checkout@v3
+
+      - name: Clone Filters.h Dependency
+        run: git clone https://github.com/MartinBloedorn/libFilter.git lib
+
       - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:

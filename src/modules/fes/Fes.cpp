@@ -3,7 +3,8 @@
 
 int FesParameters::fes_duration_ms = DEFAULT_STIMULI_DURATION;
 int FesParameters::pulse_width_ms = DEFAULT_PULSE_WIDTH;
-double FesParameters::frequency = DEFAULT_FREQUENCY;
+float FesParameters::frequency = DEFAULT_FREQUENCY;
+float FesParameters::amplitude = DEFAULT_AMPLITUDE;
 
 TaskHandle_t Fes::fes_loop_handle = NULL;
 bool Fes::status = false;

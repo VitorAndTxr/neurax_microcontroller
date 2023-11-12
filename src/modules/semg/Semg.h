@@ -18,8 +18,6 @@ private:
 
     static float output;
 
-    static SemgParameters parameters;
-
     static float mes_a[2];
     static float mes_b[2];
     static float voltage;
@@ -38,6 +36,7 @@ public:
     static float getFilteredSample();
     static float acquireAverage(int readings_amount = 2);
     static bool isInInterval(float lower_limit, float higher_limit);
+    static SemgParameters parameters;
 };
 
 #endif

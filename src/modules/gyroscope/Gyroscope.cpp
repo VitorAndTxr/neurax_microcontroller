@@ -7,20 +7,18 @@ Adafruit_MPU6050 Gyroscope::mpu;
 int minAccelY, maxAccelY;
 double currentPitch, previousPitch;
 unsigned long previousTime;
+float Gyroscope::last_value = 0.0;
 
 void Gyroscope::init()
 {
-
     if (!mpu.begin()) {
         printDebug("MPU6050 connection failed. Please check your connections.");
         Gyroscope::error = true;
         while (1);
     }
-
 }
 
 void Gyroscope::calibrateMPU6050() {
-
   for (int i = 0; i < 1000; i++) {
     sensors_event_t accel, gyro, temp;
     mpu.getEvent(&accel, &gyro, &temp);
@@ -60,7 +58,7 @@ float Gyroscope::gyroscopeRoutine(){
     if ((initial_position - aux_value) < 0){
         movement_result = 0;
     }
-    else{
+    else {
         movement_result = initial_position - aux_value;
     }
 
@@ -73,11 +71,11 @@ float Gyroscope::gyroscopeRoutine(){
         // Add some delay to avoid constant checking, adjust as needed
         //delay(100); 
     }
+    last_value = movement_result;
     return movement_result;
-
 }
 
-void Gyroscope::testGyroscope(){
+void Gyroscope::testGyroscope() {
     printDebug("testing gyroscope");
     //calibra
     Gyroscope::calibrateMPU6050();
@@ -86,19 +84,23 @@ void Gyroscope::testGyroscope(){
     float position;
     position = Gyroscope::calculatePitch();
     printDebug("testing gyroscope ending");
-
-
-}
-
-angle Gyroscope::acquire(){
-    return 90;
 }
 
 angle Gyroscope::getLastValue(){
-    return 90;
+    return last_value;
 }
 
 void Gyroscope::sendLastValue(){
+    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(3));
 
+    (*message_document)[MESSAGE_KEYS::CODE] = GYROSCOPE_MESSAGE;
+    (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
+
+    JsonObject body = 
+      (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
+
+    body[MESSAGE_KEYS::ANGLE] = 
+      last_value;
+
+    MessageHandler::addMessageToQueue(message_document);
 }
-

@@ -7,30 +7,37 @@ namespace SESSION_COMMANDS {
     const int PAUSE = 4;
     const int RESUME = 5;
     const int SINGLE_STIMULUS = 6;
-    const int STATUS = 8;
     const int PARAMETERS = 7;
+    const int STATUS = 8;
 };
 
 namespace MESSAGE_METHOD {
-    const char READ = 'r';
-    const char WRITE = 'w';
-    const char EXECUTE = 'x';
-    const char ACK = 'a';
+    const int READ = 'r';
+    const int WRITE = 'w';
+    const int EXECUTE = 'x';
+    const int ACK = 'a';
 }
 
 namespace MESSAGE_KEYS {
-	const char CODE[] = "cd";
+    const char ANGLE[] = "a";
+    const char CODE[] = "cd";
     const char METHOD[] = "mt";
     const char BODY[] = "bd";
     const char PARAMETERS[] = "parameters";
     const char STATUS[] = "status";
-	namespace parameters {
-    	const char AMPLITUDE[] = "a";
-    	const char FREQUENCY[] = "f";
-    	const char PULSE_WIDTH[] = "pw";
-    	const char DIFFICULTY[] = "df";
-    	const char STIMULI_DURATION[] = "pd";
-	}
+    namespace parameters {
+        const char AMPLITUDE[] = "a";
+        const char FREQUENCY[] = "f";
+        const char PULSE_WIDTH[] = "pw";
+        const char DIFFICULTY[] = "df";
+        const char STIMULI_DURATION[] = "pd";
+    };
+    namespace status {
+        const char COMPLETE_STIMULI_AMOUNT[] = "csa";
+        const char INTERRUPTED_STIMULI_AMOUNT[] = "isa";
+        const char TIME_OF_LAST_TRIGGER[] = "tlt";
+        const char SESSION_DURATION[] = "sd";
+    }
 }
 
 #define GYROSCOPE_MESSAGE 1

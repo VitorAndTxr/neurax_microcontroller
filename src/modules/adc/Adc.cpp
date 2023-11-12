@@ -9,15 +9,13 @@ void Adc::init()
 {
     Adc::ads.setDataRate(RATE_ADS1115_860SPS);
 
-    if (!Adc::ads.begin())
-    {
+    if (!Adc::ads.begin()) {
         printDebug("Failed to initialize ADS1115.");
         Adc::error = true;
         while (1);
     }
 }
 
-inline int16_t Adc::getValue(int input)
-{
+int16_t Adc::getValue(int input) {
     return ads.computeVolts(ads.readADC_SingleEnded(input));
 }

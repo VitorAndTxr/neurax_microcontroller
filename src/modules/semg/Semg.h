@@ -21,6 +21,12 @@ private:
     static float mes_a[2];
     static float mes_b[2];
     static float voltage;
+	static void disableSensor();
+	static void enableSensor();
+    static float readSensor();
+    static bool outputIsInInterval(float lower_limit, float higher_limit);
+    static float getFilteredSample();
+
 public:
     Semg() = delete;
     ~Semg() = delete;
@@ -32,10 +38,7 @@ public:
     static bool isTrigger();
     static void updateTriggerThreshold();
     static bool impedanceTooLow();
-    static float readSensor();
-    static float getFilteredSample();
-    static float acquireAverage(int readings_amount = 2);
-    static bool isInInterval(float lower_limit, float higher_limit);
+    static float acquireAverage(int readings_amount = SEMG_DEFAULT_READINGS_AMOUNT);
     static SemgParameters parameters;
 };
 

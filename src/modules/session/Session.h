@@ -5,6 +5,8 @@
 #include "../semg/Semg.h"
 #include "../fes/Fes.h"
 #include "../message_handler/MessageHandler.h"
+#include "../../globals.h"
+#include "../emergency_button/EmergencyButton.h"
 struct SessionStatus
 {
     static short complete_stimuli_amount;
@@ -30,13 +32,16 @@ private:
     static SessionStatus status;
     static SessionParameters parameters;
 	TickType_t getTicksDelayBetweenStimuli();
-	static void loop();
     static void resetSessionStatus(bool session_starting = true);
 	static void delayBetweenStimuli();
+	static void detectionAndStimulation();
+	static TaskHandle_t task_handle;
+	static void suspendSessionTask();
 public:
     Session() = delete;
     ~Session() = delete;
 
+	static void loop(void * parameters);
     static void init();
     static void start();
     static void stop();

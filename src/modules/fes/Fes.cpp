@@ -5,6 +5,8 @@ int FesParameters::fes_duration_ms = DEFAULT_STIMULI_DURATION;
 int FesParameters::pulse_width_ms = DEFAULT_PULSE_WIDTH;
 float FesParameters::frequency = DEFAULT_FREQUENCY;
 float FesParameters::amplitude = DEFAULT_AMPLITUDE;
+bool Fes::emergency_stop = false;
+
 
 TaskHandle_t Fes::fes_loop_handle = NULL;
 bool Fes::status = false;
@@ -69,14 +71,13 @@ void Fes::fesLoopTaskWrapper(void *obj)
 
 void Fes::fesLoop(void *obj) 
 {
+#if FES_MODULE_ENABLE
     int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
 
     Fes::status = true;
-    //while (!emergency_stop)
-    while (true)
+    while (!Fes::emergency_stop)
     {
-#if FES_MODULE_ENABLE
         positiveHBridge();
         vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
 
@@ -89,7 +90,7 @@ void Fes::fesLoop(void *obj)
     }
 }
 
-inline void Fes::begin()
+void Fes::begin()
 {
     //criar uma task com pri max (lembrar de fazer a isr do botao de emergencia)
     

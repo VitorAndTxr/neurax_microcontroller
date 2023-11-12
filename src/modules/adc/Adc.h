@@ -1,7 +1,7 @@
 #ifndef ADC_MODULE
 #define ADC_MODULE
 #include <Adafruit_ADS1X15.h>
-#include "../debug/debug.h"
+#include "../debug/Debug.h"
 
 class Adc
 {

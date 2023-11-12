@@ -3,7 +3,7 @@
 
 #include <Arduino.h>
 #include "../potentiometer/Potentiometer.h"
-#include "../../Globals.h"
+#include "../../globals.h"
 
 struct FesParameters {
     static int fes_duration_ms;

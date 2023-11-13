@@ -2,6 +2,7 @@
 #define ADC_MODULE
 #include <Adafruit_ADS1X15.h>
 #include "../debug/Debug.h"
+#include "../../globals.h"
 
 class Adc
 {

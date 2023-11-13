@@ -7,6 +7,7 @@
 #include "../message_handler/MessageHandler.h"
 #include "../../globals.h"
 #include "../emergency_button/EmergencyButton.h"
+#include "../gyroscope/Gyroscope.h"
 struct SessionStatus
 {
     static short complete_stimuli_amount;

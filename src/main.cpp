@@ -17,7 +17,7 @@ void setup() {
 }
 
 void loop() {
-	MessageHandler::loop();
+	MessageHandler::start();
 	//BatteryMonitor::loop();
 }
 

@@ -6,6 +6,7 @@ typedef float angle;
 #include <Adafruit_MPU6050.h>
 #include "../debug/Debug.h"
 #include "../message_handler/MessageHandler.h"
+#include "../../globals.h"
 
 class Gyroscope
 {

@@ -6,29 +6,27 @@ int FesParameters::pulse_width_ms = DEFAULT_PULSE_WIDTH;
 float FesParameters::frequency = DEFAULT_FREQUENCY;
 float FesParameters::amplitude = DEFAULT_AMPLITUDE;
 bool Fes::emergency_stop = false;
+TimerHandle_t Fes::fesTimer = NULL;
 
 
 TaskHandle_t Fes::fes_loop_handle = NULL;
-bool Fes::status = false;
+bool Fes::stimulating = false;
 
-//bool emergency_stop = false;
-
-
-inline void negativeHBridge(){
+void negativeHBridge(){
 #if FES_MODULE_ENABLE
     digitalWrite(H_BRIDGE_INPUT_2, LOW);
     digitalWrite(H_BRIDGE_INPUT_1, HIGH);
 #endif
 }
 
-inline void positiveHBridge(){
+void positiveHBridge(){
 #if FES_MODULE_ENABLE
     digitalWrite(H_BRIDGE_INPUT_1, LOW);
     digitalWrite(H_BRIDGE_INPUT_2, HIGH);
 #endif
 }
 
-inline void hBridgeReset(){
+void Fes::hBridgeReset(){
 #if FES_MODULE_ENABLE
     digitalWrite(H_BRIDGE_INPUT_1, LOW);
     digitalWrite(H_BRIDGE_INPUT_2, LOW);
@@ -39,10 +37,10 @@ void Fes::init()
 {
     Fes::initGpio();
     Fes::setParameters();
-    hBridgeReset();
+    Fes::hBridgeReset();
 }
 
-inline void Fes::initGpio()
+void Fes::initGpio()
 {
 #if FES_MODULE_ENABLE
     pinMode(H_BRIDGE_INPUT_1, OUTPUT);
@@ -69,14 +67,14 @@ void Fes::fesLoopTaskWrapper(void *obj)
     instance->fesLoop(); */
 }
 
-void Fes::fesLoop(void *obj) 
+void Fes::fesLoop() 
 {
 #if FES_MODULE_ENABLE
     int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
 
-    Fes::status = true;
-    while (!Fes::emergency_stop)
+    Fes::stimulating = true;
+    while (!Fes::emergency_stop && stimulating)
     {
         positiveHBridge();
         vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
@@ -84,7 +82,7 @@ void Fes::fesLoop(void *obj)
         negativeHBridge();
         vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
 
-        hBridgeReset();
+        Fes::hBridgeReset();
         delayMicroseconds(remaining_time);
 #endif
     }
@@ -92,25 +90,28 @@ void Fes::fesLoop(void *obj)
 
 void Fes::begin()
 {
-    //criar uma task com pri max (lembrar de fazer a isr do botao de emergencia)
-    
-    xTaskCreatePinnedToCore( // Use xTaskCreate() in vanilla FreeRTOS
-        &Fes::fesLoop,// Function to be called
-        "FES Loop", // Name of task
-        1024, // Stack size (bytes in ESP32, words in FreeRTOS)
-        NULL, // Parameter to pass to function
-        20, // Task priority (0 to configmAx_PRIORITIES - 1)
-        &Fes::fes_loop_handle, // Task handle
-        secondary_cpu) ;
 
-    vTaskDelay(Fes::parameters.fes_duration_ms / portTICK_PERIOD_MS);
-    // terminate the task after fes duration
-    vTaskDelete(Fes::fes_loop_handle);
-    Fes::fes_loop_handle = NULL; 
+    fesTimer = xTimerCreate(
+        "MyTimer",           // Nome do temporizador (para fins de depuração)
+        pdMS_TO_TICKS(Fes::parameters.fes_duration_ms),  // Período em milissegundos
+        pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
+        (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+        Fes::stopFes        // Função a ser chamada quando o temporizador expirar
+    );
 
-    Fes::status = false;
+    // Verificação se o temporizador foi criado com sucesso
+    if (fesTimer != NULL) {
+        // Inicialização do temporizador
+        xTimerStart(fesTimer, 0);
+        Fes::fesLoop();
+    } else {
+        printDebug("Erro ao criar o temporizador do FES!");
+    }
 }
 
+void Fes::stopFes(void * parameters) {
+    Fes::stimulating = false;
+}
 
 void Fes::setParameters(int fes_duration_ms, int pulse_width_ms, double frequency) {
     Fes::parameters.fes_duration_ms = fes_duration_ms;
@@ -131,5 +132,5 @@ void Fes::setFrequency(double frequency) {
 }
 
 bool Fes::isOn() {
-    return Fes::status;
+    return Fes::stimulating;
 }

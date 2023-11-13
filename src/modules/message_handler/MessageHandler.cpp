@@ -5,6 +5,7 @@
 DynamicJsonDocument message(JSON_BUFFER_SIZE);
 const int MessageHandler::queue_size = 10;
 QueueHandle_t MessageHandler::message_handler_queue = NULL; 
+TaskHandle_t MessageHandler::task_handle = NULL;
 
 
 void MessageHandler::init() {
@@ -18,7 +19,21 @@ void MessageHandler::init() {
 	}
 }
 
-void MessageHandler::loop()
+void MessageHandler::start() {
+    // TODO check memory
+    xTaskCreatePinnedToCore(
+		MessageHandler::loop,
+		"Session task",
+		2048,
+		NULL,
+		MESSAGE_HANDLER_SESSION_TASK_PRIORITY,
+		&MessageHandler::task_handle,
+		secondary_cpu
+	);
+
+}
+
+void MessageHandler::loop(void * parameters)
 {
     while (true) {
         if (Bluetooth::isConnected()) {

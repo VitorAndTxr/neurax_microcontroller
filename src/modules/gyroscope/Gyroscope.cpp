@@ -43,47 +43,55 @@ float Gyroscope::calculatePitch() {
 
 float Gyroscope::gyroscopeRoutine(){
     
-    int gyroscope_time = 3000; //3 segundos
-    float initial_position, aux_value, movement_result; 
-    unsigned long startTime = millis();
+    if (xSemaphoreTake(i2cMutex, portMAX_DELAY)) {
+      float initial_position, aux_value, movement_result; 
+      unsigned long startTime = millis();
 
-    //calibra
-    Gyroscope::calibrateMPU6050();
+      //calibra
+      Gyroscope::calibrateMPU6050();
 
-    //le o primeiro valor
-    initial_position = Gyroscope::calculatePitch();
+      //le o primeiro valor
+      initial_position = Gyroscope::calculatePitch();
 
-    //le o segundo valor e salva a diferença 
-    aux_value = Gyroscope::calculatePitch();
-    if ((initial_position - aux_value) < 0){
-        movement_result = 0;
+      //le o segundo valor e salva a diferença 
+      aux_value = Gyroscope::calculatePitch();
+      if ((initial_position - aux_value) < 0){
+          movement_result = 0;
+      }
+      else {
+          movement_result = initial_position - aux_value;
+      }
+
+      // tempo de duracao da medida
+      while (millis() - startTime < GYROSCOPE_TIME) {
+          aux_value = Gyroscope::calculatePitch();
+          if ((initial_position - aux_value) > movement_result){
+              movement_result = initial_position - aux_value;
+          }
+          // Add some delay to avoid constant checking, adjust as needed
+          //delay(100); 
+      }
+      last_value = movement_result;
+      xSemaphoreGive(i2cMutex);
+      return movement_result;
+    } else {
+      return 0.0;
     }
-    else {
-        movement_result = initial_position - aux_value;
-    }
-
-    // tempo de duracao da medida
-    while (millis() - startTime < gyroscope_time) {
-        aux_value = Gyroscope::calculatePitch();
-        if ((initial_position - aux_value) > movement_result){
-            movement_result = initial_position - aux_value;
-        }
-        // Add some delay to avoid constant checking, adjust as needed
-        //delay(100); 
-    }
-    last_value = movement_result;
-    return movement_result;
+    
 }
 
 void Gyroscope::testGyroscope() {
-    printDebug("testing gyroscope");
-    //calibra
-    Gyroscope::calibrateMPU6050();
+    if (xSemaphoreTake(i2cMutex, portMAX_DELAY)) {
+      printDebug("testing gyroscope");
+      //calibra
+      Gyroscope::calibrateMPU6050();
 
-    //le o primeiro valor
-    float position;
-    position = Gyroscope::calculatePitch();
-    printDebug("testing gyroscope ending");
+      //le o primeiro valor
+      float position;
+      position = Gyroscope::calculatePitch();
+      printDebug("testing gyroscope ending");
+      xSemaphoreGive(i2cMutex);
+    }
 }
 
 angle Gyroscope::getLastValue(){

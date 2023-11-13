@@ -35,7 +35,7 @@ void Session::start() {
 		NULL,
 		SESSION_TASK_PRIORITY,
 		&Session::task_handle,
-		main_cpu
+		session_cpu
 	);
 }
 
@@ -44,12 +44,14 @@ void Session::stop() {
 		vTaskDelete(Session::task_handle);
 		Session::task_handle = NULL; 
 		EmergencyButton::stop();
+		Fes::hBridgeReset();
 	}
 }
 
 void Session::pause() {
     Session::status.paused = true;
 	Session::status.interrupted_stimuli_amount++;
+	Fes::hBridgeReset();
 	Session::sendSessionStatus();
 	suspendSessionTask();
 	// TODO
@@ -157,7 +159,6 @@ void Session::resetSessionStatus(bool session_starting) {
 	SessionStatus::ongoing = session_starting;
 	SessionStatus::time_of_last_trigger = 0;
 	Fes::emergency_stop = false;
-	if (task_handle != NULL) {
-		Session::stop();
-	}
+	Session::stop();
+
 }

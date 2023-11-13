@@ -16,13 +16,15 @@ class Fes
 private:
     static Potentiometer potentiometer;
     static TaskHandle_t fes_loop_handle;
-    static bool status;
+    static bool stimulating;
+    static TimerHandle_t fesTimer;
 
 public:
     Fes() = delete;
     ~Fes() = delete;
     static void init();
     static void initGpio();
+    static void hBridgeReset();
     static void setParameters(
         int fes_duration_ms = DEFAULT_STIMULI_DURATION, 
         int pulse_width_ms = DEFAULT_PULSE_WIDTH,
@@ -36,9 +38,10 @@ public:
     static void increaseAmplitude(int steps = DEFAULT_POTENTIOMETER_STEPS);
     static void decreaseAmplitude(int steps = DEFAULT_POTENTIOMETER_STEPS);
 
-    static void fesLoop(void *obj);
+    static void fesLoop();
     static void fesLoopTaskWrapper(void *obj);
     static bool isOn();
+    static void stopFes(void * parameters);
     static FesParameters parameters;
 	static bool emergency_stop;
 };

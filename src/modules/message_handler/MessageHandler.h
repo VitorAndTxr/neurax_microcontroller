@@ -22,13 +22,15 @@ private:
     static void handleSessionParametersMessage(DynamicJsonDocument &message);
     static int getMessageCode(DynamicJsonDocument &message);
     static String getMessageMethod(DynamicJsonDocument &message);
+    static TaskHandle_t task_handle;
     static void handleIncomingMessages();
     static void handleOutgoingMessages();
 public:
     MessageHandler() = delete;
     ~MessageHandler() = delete;
     static void init();
-    static void loop();
+    static void start();
+    static void loop(void * parameters);
     static bool addMessageToQueue(const DynamicJsonDocument* message);
     static bool readMessageFromQueue(DynamicJsonDocument* message);
 };

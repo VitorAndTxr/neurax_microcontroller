@@ -49,6 +49,7 @@ void Session::stop() {
 
 void Session::pause() {
     Session::status.paused = true;
+	Session::status.interrupted_stimuli_amount++;
 	Session::sendSessionStatus();
 	suspendSessionTask();
 	// TODO
@@ -140,11 +141,9 @@ void Session::detectionAndStimulation() {
 			Fes::begin();
 			if(!Fes::emergency_stop) {
 				Session::status.complete_stimuli_amount++;
+				Session::sendSessionStatus();
 			}
-			else {
-				Session::status.interrupted_stimuli_amount++;
-			}
-			Session::sendSessionStatus();
+
 			Fes::emergency_stop = false;
 			delayBetweenStimuli();
 		}

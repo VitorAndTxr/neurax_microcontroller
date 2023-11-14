@@ -45,8 +45,9 @@ float Gyroscope::calculatePitch() {
 
 float Gyroscope::gyroscopeRoutine(){
     
-    //if (xSemaphoreTake(i2cMutex, portMAX_DELAY)) {
-		float initial_position, aux_value, movement_result; 
+    int gyroscope_time = 10000; //10 segundos
+    float initial_position, aux_value, movement_result; 
+    
 
 		//calibra
 		Gyroscope::calibrateMPU6050();
@@ -62,25 +63,30 @@ float Gyroscope::gyroscopeRoutine(){
 			movement_result = initial_position - aux_value;
 		}
 
-    printDebug("[GYRO] Calibracao concluida.");
-		unsigned long startTime = millis();
-		// tempo de duracao da medida
-		while (millis() - startTime < GYROSCOPE_TIME) {
-			aux_value = Gyroscope::calculatePitch();
-			if ((initial_position - aux_value) > movement_result){
-				movement_result = initial_position - aux_value;
-			}
-      //Serial.println(movement_result, 2);
-			// Add some delay to avoid constant checking, adjust as needed
-			//delay(100); 
-		}
-		last_value = movement_result;
-		//xSemaphoreGive(i2cMutex);
-    Serial.println(movement_result, 2);
-		return movement_result;
-    //} else {
-    //  	return 0.0;
-    //}
+    // tempo de duracao da medida
+    unsigned long startTime = millis();
+    while (millis() - startTime < gyroscope_time) {
+        aux_value = Gyroscope::calculatePitch();
+        if ((initial_position - aux_value) > movement_result){
+            movement_result = initial_position - aux_value;
+        }
+        // Add some delay to avoid constant checking, adjust as needed
+        //delay(100); 
+    }
+    return movement_result;
+
+}
+
+void Gyroscope::testGyroscope(){
+    printDebug("testing gyroscope");
+    //calibra
+    Gyroscope::calibrateMPU6050();
+
+    //le o primeiro valor
+    float position;
+    position = Gyroscope::calculatePitch();
+    printDebug("testing gyroscope ending");
+
 }
 
 angle Gyroscope::getLastValue(){

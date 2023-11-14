@@ -25,12 +25,15 @@ private:
 
     static float mes_a[2];
     static float mes_b[2];
-    static float voltage;
+    static volatile float voltage;
 	static void disableSensor();
 	static void enableSensor();
     static float readSensor();
     static bool outputIsInInterval(float lower_limit, float higher_limit);
     static float getFilteredSample();
+	static volatile int sample_amount;
+	static void filterSamplesArray();
+	static const float sampling_period_ms;
 
 public:
     Semg() = delete;
@@ -47,6 +50,10 @@ public:
     static SemgParameters parameters;
 	static void sendTriggerMessage();
 	static void testTrigger(int test_duration = SEMG_DEFAULT_TEST_DURATION_SECONDS);
+	static void samplingCallback(void * obj);
+	static TimerHandle_t samplingTimer;
+	static void startSamplingTimer();
+	static void stopSamplingTimer();
 };
 
 #endif

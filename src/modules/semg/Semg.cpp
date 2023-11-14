@@ -7,8 +7,11 @@ float SemgParameters::difficulty = SEMG_DIFFICULTY_DEFAULT;
 float SemgParameters::threshold = 0;
 float Semg::mes_a[2] = {0};
 float Semg::mes_b[2] = {0};
-float Semg::voltage = 0.0f;
+volatile float Semg::voltage = 0.0f;
 float Semg::output = 0.0f;
+volatile int Semg::sample_amount = 0;
+TimerHandle_t Semg::samplingTimer = NULL;
+const float Semg::sampling_period_ms = SEMG_SAMPLING_PERIOD;
 
 void Semg::init() {
     pinMode(SEMG_ENABLE_PIN, OUTPUT);
@@ -48,13 +51,49 @@ bool Semg::impedanceTooLow() {
     return (Semg::output > SEMG_LOW_IMPEDANCE_THRESHOLD) ? true : false;
 }
 
-float Semg::getFilteredSample() {
-    for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
+void Semg::samplingCallback(void * obj) {
+	if (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {
         Semg::readSensor();
-        Semg::filtered_value[i] = SemgFilter::filter(Semg::voltage);
+		Semg::filtered_value[Semg::sample_amount] = Semg::voltage;
+		Semg::sample_amount++;
+	}
+}
 
-        delay(1);
+void Semg::filterSamplesArray() {
+	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
+        Semg::filtered_value[i] = SemgFilter::filter(Semg::filtered_value[i]);
     }
+}
+
+void Semg::startSamplingTimer() {
+	samplingTimer = xTimerCreate(
+		"sEMG timer",           // Nome do temporizador (para fins de depuração)
+		pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
+		pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
+		(void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+		Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
+    );
+
+    // Verificação se o temporizador foi criado com sucesso
+    if (samplingTimer != NULL) {
+        xTimerStart(samplingTimer, 0);
+        Fes::fesLoop();
+    } else {
+        printDebug("Erro ao criar o temporizador do FES!");
+    }
+}
+
+void Semg::stopSamplingTimer() {
+	xTimerDelete(Semg::samplingTimer, 0);
+}
+
+float Semg::getFilteredSample() {
+
+	Semg::startSamplingTimer();
+	while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {}
+	Semg::sample_amount = 0;
+
+    Semg::filterSamplesArray();
 
     float average_every_n_samples;
     float sum_of_averages = 0;

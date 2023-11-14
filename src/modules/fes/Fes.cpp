@@ -80,7 +80,7 @@ void Fes::fesLoop() {
 
 void Fes::begin() {
     fesTimer = xTimerCreate(
-        "MyTimer",           // Nome do temporizador (para fins de depuração)
+        "FES timer",           // Nome do temporizador (para fins de depuração)
         pdMS_TO_TICKS(Fes::parameters.fes_duration_ms),  // Período em milissegundos
         pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
         (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)

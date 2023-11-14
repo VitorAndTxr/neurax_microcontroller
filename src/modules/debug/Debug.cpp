@@ -2,9 +2,24 @@
 #include <string>
 #include "Debug.h"
 
-void printDebug(const std::string& inputString)
+
+void printDebug(String inputString)
 {
     if (DEBUG) {
-        std::cout << inputString << std::endl;
-    }
+		Serial.println(inputString);
+	}
 }
+
+/* void printWarn(String& inputString) {
+	//setTerminalColor();
+	printDebug(RED);
+	printDebug(inputString);
+	printDebug(RESET_TERMINAL_COLOR);
+}
+
+void printMessageAlert(String& inputString) {
+	printDebug(BLUE);
+	printDebug(inputString);
+	printDebug(RESET_TERMINAL_COLOR);
+} */
+

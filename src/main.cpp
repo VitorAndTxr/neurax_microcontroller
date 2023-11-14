@@ -7,17 +7,17 @@
 #include "modules/message_handler/MessageHandler.h"
 #include "modules/battery_monitor/Battery_monitor.h"
 #include "modules/potentiometer/Potentiometer.h"
-
+#include "modules/debug/Debug.h"
 void setup() {
-	Adc::init();
+	Serial.begin(115200);
+	printDebug("Iniciando esp");
+	//Adc::init();
 	//Fes::init();
 	//Semg::init();
-	Potentiometer::init();
+	//Potentiometer::init();
 	//Battery_monitor::init();
 	//Bluetooth::init();
-	//MessageHandler::init();
-	Serial.begin(115200);
-	
+	MessageHandler::init();
 }
 float voltage = 0.5;
 void loop() {

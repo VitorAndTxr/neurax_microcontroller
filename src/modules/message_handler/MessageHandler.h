@@ -6,6 +6,8 @@
 #include "CommunicationProtocol.h"
 #include "../debug/Debug.h"
 #include "../gyroscope/Gyroscope.h"
+#include "../bluetooth/Bluetooth.h"
+#include "../session/Session.h"
 
 static const uint8_t buf_len = 255;     // Size of buffer to look for command
 static const char command[] = "delay "; // Note the space!

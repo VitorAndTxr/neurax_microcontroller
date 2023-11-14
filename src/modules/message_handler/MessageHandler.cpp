@@ -1,6 +1,5 @@
 #include "MessageHandler.h"
-#include "modules/bluetooth/Bluetooth.h"
-#include "modules/session/Session.h"
+
 
 DynamicJsonDocument message(JSON_BUFFER_SIZE);
 const int MessageHandler::queue_size = 10;
@@ -88,38 +87,49 @@ void MessageHandler::interpretMessage(String data)
     
     switch (getMessageCode(message)) {
         case GYROSCOPE_MESSAGE:
+			printDebug("[msg] Giroscópio");
             MessageHandler::handleGyroscopeMessage(message);
             break;
             
         case (SESSION_COMMANDS::START):
+			printDebug("[msg] SESSION_COMMANDS::START");
+
             Session::start();
             break;
 
         case SESSION_COMMANDS::STOP:
+			printDebug("[msg] SESSION_COMMANDS::STOP");
             Session::stop();
             break;
 
         case SESSION_COMMANDS::PAUSE:
+			printDebug("[msg] SESSION_COMMANDS::PAUSE");
+		
             Session::pause();
             break;
 
         case SESSION_COMMANDS::RESUME:
+			printDebug("[msg] SESSION_COMMANDS::RESUME");
             Session::resume();
             break;
 
         case SESSION_COMMANDS::SINGLE_STIMULUS:
+			printDebug("[msg] SESSION_COMMANDS::SINGLE_STIMULUS");
             Session::singleStimulus();
             break;
 
         case SESSION_COMMANDS::PARAMETERS:
+			printDebug("[msg] SESSION_COMMANDS::PARAMETERS");
             MessageHandler::handleSessionParametersMessage(message);
             break;
 		
 		case MESSAGE_CODE_TRIGGER:
+			printDebug("[msg] Trigger test");
 			Semg::testTrigger();
 			break;
 
         default:
+			printDebug("[msg] Unknown message code");
             break;
     }
     message.clear();

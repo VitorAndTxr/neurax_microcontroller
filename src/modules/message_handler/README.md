@@ -40,15 +40,6 @@ Depending on the message's code and method, the message may contain a body with 
 </thead>
 <tbody>
   <tr>
-    <td>0</td>
-    <td>Connection handshake</td>
-    <td>w</td>
-    <td>App</td>
-    <td>ESP32</td>
-    <td>No body.</td>
-    <td></td>
-  </tr>
-  <tr>
     <td rowspan="3">1</td>
     <td rowspan="3">Gyroscope reading</td>
     <td>r</td>
@@ -135,13 +126,20 @@ Depending on the message's code and method, the message may contain a body with 
     <td></td>
   </tr>
   <tr>
-    <td>9</td>
-    <td>ACK</td>
+    <td rowspan="3">9</td>
+    <td rowspan="3">Trigger</td>
     <td>w</td>
-    <td>Either</td>
-    <td>Either</td>
-    <td></td>
-    <td></td>
+    <td>ESP32</td>
+    <td>App</td>
+    <td>No body.</td>
+    <td>sEMG module detected a trigger.</td>
+    <tr>
+    <td>x</td>
+    <td>App</td>
+    <td>ESP32</td>
+    <td>No body.</td>
+    <td>App request a trigger detection test to ESP32.</td>
+    </tr>
   </tr>
 </tbody>
 </table>

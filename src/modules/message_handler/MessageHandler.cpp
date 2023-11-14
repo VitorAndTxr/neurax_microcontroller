@@ -86,7 +86,6 @@ void MessageHandler::interpretMessage(String data)
         return;
     } 
     
-    // aqui não vai ter case 'w'
     switch (getMessageCode(message)) {
         case GYROSCOPE_MESSAGE:
             MessageHandler::handleGyroscopeMessage(message);
@@ -115,9 +114,10 @@ void MessageHandler::interpretMessage(String data)
         case SESSION_COMMANDS::PARAMETERS:
             MessageHandler::handleSessionParametersMessage(message);
             break;
-        
-        case NE_ACK:
-            break;
+		
+		case MESSAGE_CODE_TRIGGER:
+			Semg::testTrigger();
+			break;
 
         default:
             break;

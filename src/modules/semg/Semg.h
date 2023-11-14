@@ -3,6 +3,11 @@
 #include "../SemgFilter/SemgFilter.h"
 #include "../adc/Adc.h"
 #include "../fes/Fes.h"
+#include <ArduinoJson.h>
+
+#include "../debug/Debug.h"
+#include "../message_handler/MessageHandler.h"
+#include "../../globals.h"
 
 struct SemgParameters {
     static float gain;
@@ -40,6 +45,8 @@ public:
     static bool impedanceTooLow();
     static float acquireAverage(int readings_amount = SEMG_DEFAULT_READINGS_AMOUNT);
     static SemgParameters parameters;
+	static void sendTriggerMessage();
+	static void testTrigger(int test_duration = SEMG_DEFAULT_TEST_DURATION_SECONDS);
 };
 
 #endif

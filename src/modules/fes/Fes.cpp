@@ -10,7 +10,7 @@ TimerHandle_t Fes::fesTimer = NULL;
 
 
 TaskHandle_t Fes::fes_loop_handle = NULL;
-bool Fes::stimulating = false;
+volatile bool Fes::stimulating = false;
 
 void negativeHBridge(){
 #if FES_MODULE_ENABLE
@@ -58,17 +58,7 @@ void Fes::decreaseAmplitude(int steps)
     potentiometer.decrease();
 }
 
-void Fes::fesLoopTaskWrapper(void *obj) 
-{
-/*     // Cast the void pointer back to the class instance
-    Fes *instance = static_cast<Fes *>(obj);
-
-    // Call the member function using the instance
-    instance->fesLoop(); */
-}
-
-void Fes::fesLoop() 
-{
+void Fes::fesLoop() {
 #if FES_MODULE_ENABLE
     int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
@@ -84,13 +74,11 @@ void Fes::fesLoop()
 
         Fes::hBridgeReset();
         delayMicroseconds(remaining_time);
-#endif
     }
+#endif
 }
 
-void Fes::begin()
-{
-
+void Fes::begin() {
     fesTimer = xTimerCreate(
         "MyTimer",           // Nome do temporizador (para fins de depuração)
         pdMS_TO_TICKS(Fes::parameters.fes_duration_ms),  // Período em milissegundos
@@ -101,7 +89,6 @@ void Fes::begin()
 
     // Verificação se o temporizador foi criado com sucesso
     if (fesTimer != NULL) {
-        // Inicialização do temporizador
         xTimerStart(fesTimer, 0);
         Fes::fesLoop();
     } else {
@@ -110,6 +97,9 @@ void Fes::begin()
 }
 
 void Fes::stopFes(void * parameters) {
+    Fes::stimulating = false;
+}
+void Fes::stopFes() {
     Fes::stimulating = false;
 }
 

@@ -16,7 +16,7 @@ class Fes
 private:
     static Potentiometer potentiometer;
     static TaskHandle_t fes_loop_handle;
-    static bool stimulating;
+    static volatile bool stimulating;
     static TimerHandle_t fesTimer;
 
 public:
@@ -42,6 +42,7 @@ public:
     static void fesLoopTaskWrapper(void *obj);
     static bool isOn();
     static void stopFes(void * parameters);
+    static void stopFes();
     static FesParameters parameters;
 	static bool emergency_stop;
 };

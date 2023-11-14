@@ -22,6 +22,6 @@ float Adc::getValue(int input) {
         xSemaphoreGive(i2cMutex);
         return value;
     } else {
-        return NULL;
+        return 0.0f;
     }
 }

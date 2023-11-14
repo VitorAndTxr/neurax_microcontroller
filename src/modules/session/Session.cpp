@@ -50,10 +50,14 @@ void Session::stop() {
 
 void Session::pause() {
     Session::status.paused = true;
-	Session::status.interrupted_stimuli_amount++;
-	Fes::hBridgeReset();
-	Session::sendSessionStatus();
 	suspendSessionTask();
+	if (Fes::isOn) {
+		Fes::stopFes();
+		Fes::hBridgeReset();
+	}
+	
+	Session::status.interrupted_stimuli_amount++;
+	Session::sendSessionStatus();
 	// TODO
 	// send pause message to app (maybe add reason?)
 }
@@ -140,6 +144,7 @@ void Session::detectionAndStimulation() {
 			// TODO Leds in thread
 		}
 		else {
+			Semg::sendTriggerMessage();
 			Fes::begin();
 			if(!Fes::emergency_stop) {
 				Session::status.complete_stimuli_amount++;

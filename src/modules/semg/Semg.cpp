@@ -90,6 +90,27 @@ float Semg::acquireAverage(int readings_amount) {
     return Semg::output;
 }
 
+void Semg::testTrigger(int test_duration_seconds) {
+	test_duration_seconds *= 1000;
+	time_t test_start = millis();
+	while (millis() - test_start < test_duration_seconds) {
+		Semg::acquireAverage();
+		if (Semg::isTrigger()) {
+			Semg::sendTriggerMessage();
+			return;
+		}
+	}
+}
+
+void Semg::sendTriggerMessage() {
+	DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(3));
+
+    (*message_document)[MESSAGE_KEYS::CODE] = MESSAGE_CODE_TRIGGER;
+    (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
+
+    MessageHandler::addMessageToQueue(message_document);
+}
+
 void Semg::enableSensor() {
     digitalWrite(SEMG_ENABLE_PIN, HIGH);
 }

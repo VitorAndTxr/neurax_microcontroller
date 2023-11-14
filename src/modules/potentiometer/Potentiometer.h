@@ -10,11 +10,16 @@ private:
 
 
 public:
+
+
     Potentiometer();
     ~Potentiometer();
-    void pulse(int steps = 1);
-    void increase(int steps = 1);
-    void decrease(int steps = 1);
+    static void init();
+    static void pulse(int steps = 1);
+    static void increase(int steps = 1);
+    static void decrease(int steps = 1);
+    static float voltageSet(float voltage);
+    static float getCorrectedVoltage();
 };
 
 #endif

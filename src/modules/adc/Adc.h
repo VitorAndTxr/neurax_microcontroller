@@ -14,7 +14,7 @@ public:
     Adc() = delete;
     ~Adc() = delete;
     static void init();
-    static int16_t getValue(int input);
+    static float getValue(int input);
 };
 
 #endif

@@ -29,7 +29,6 @@ public:
     static float calculatePitch();
     //TODO mutex needed?
     static float gyroscopeRoutine(); 
-    static void testGyroscope();
 };
 
 #endif

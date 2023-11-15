@@ -8,6 +8,7 @@ TaskHandle_t MessageHandler::task_handle = NULL;
 
 
 void MessageHandler::init() {
+    Bluetooth::init();
     if(!Bluetooth::isConnected) {
         Bluetooth::waitForConnection();
     }
@@ -15,7 +16,9 @@ void MessageHandler::init() {
 	message_handler_queue = xQueueCreate(queue_size, sizeof(uint32_t*));
 	if (message_handler_queue == NULL) {
 		printDebug("QueueHandler: Failed to create queue.");
-	}
+	} else {
+        printDebug("Fila criada com sucesso");
+    }
 }
 
 void MessageHandler::start() {
@@ -54,7 +57,8 @@ bool MessageHandler::addMessageToQueue(const DynamicJsonDocument* message) {
 }
 
 bool MessageHandler::readMessageFromQueue(DynamicJsonDocument* message) {
-    return (xQueueReceive(message_handler_queue, message, portMAX_DELAY) == pdPASS);
+    //return (xQueueReceive(message_handler_queue, message, portMAX_DELAY) == pdPASS);
+    return false;
 }
 
 inline void MessageHandler::handleIncomingMessages() {
@@ -65,13 +69,18 @@ inline void MessageHandler::handleIncomingMessages() {
 }
 
 inline void MessageHandler::handleOutgoingMessages() {
-	DynamicJsonDocument* message_to_send = NULL;
-    if (readMessageFromQueue(message_to_send)) {
+	//DynamicJsonDocument* message_to_send;
+    /*DynamicJsonDocument message_to_send(512);
+    //xQueueReceive(message_handler_queue, &message_to_send, 1000);
+    if (xQueueReceive(message_handler_queue, &message_to_send, 0) == pdPASS) {
         String serialized_message;
-        serializeJson(*message_to_send, serialized_message);
-        Bluetooth::sendData(serialized_message);
+        serializeJson(message_to_send, serialized_message);
+        
+        Serial.println(serialized_message);
+        //Bluetooth::sendData(serialized_message);
+        Serial.print("msg da fila");
     }
-    delete message_to_send;
+    //delete message_to_send;*/
 }
 
 
@@ -132,7 +141,7 @@ void MessageHandler::interpretMessage(String data)
 			printDebug("[msg] Unknown message code");
             break;
     }
-    message.clear();
+    //message.clear();
 }
 
 String MessageHandler::getMessageMethod(DynamicJsonDocument &message) {
@@ -166,14 +175,30 @@ void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
 
 void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message) {
     if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
-            JsonObject statusObj = message[MESSAGE_KEYS::BODY][MESSAGE_KEYS::PARAMETERS].as<JsonObject>();
+            JsonObject statusObj = message[MESSAGE_KEYS::BODY].as<JsonObject>();
+            //MessageHandler::addMessageToQueue(&message);
 
+            String serialized_message;
+            serializeJson(statusObj, serialized_message);
+            Serial.println(serialized_message);
+            Bluetooth::sendData(serialized_message);
 
             float amplitude = statusObj[MESSAGE_KEYS::parameters::AMPLITUDE];
             float frequency = statusObj[MESSAGE_KEYS::parameters::FREQUENCY];
             float pulse_width = statusObj[MESSAGE_KEYS::parameters::PULSE_WIDTH];
             float difficulty = statusObj[MESSAGE_KEYS::parameters::DIFFICULTY];
             float fes_duration = statusObj[MESSAGE_KEYS::parameters::STIMULI_DURATION];
+
+            Serial.print(">> ");
+            Serial.println(amplitude, 2);
+            Serial.print(">> ");
+            Serial.println(frequency, 2);
+            Serial.print(">> ");
+            Serial.println(pulse_width, 2);
+            Serial.print(">> ");
+            Serial.println(difficulty, 2);
+            Serial.print(">> ");
+            Serial.println(fes_duration, 2);
 
             Fes::parameters.amplitude = amplitude;
             Fes::parameters.frequency = frequency;

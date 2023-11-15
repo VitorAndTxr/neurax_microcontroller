@@ -31,5 +31,5 @@ String Bluetooth::readData() {
 }
 
 void Bluetooth::sendData(const String &data) {
-    BTSerial.print(data); 
+    BTSerial.println(data); 
 }

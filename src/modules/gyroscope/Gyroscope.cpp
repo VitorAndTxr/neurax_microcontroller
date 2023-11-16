@@ -7,19 +7,19 @@ Adafruit_MPU6050 Gyroscope::mpu;
 int minAccelY, maxAccelY;
 double currentPitch, previousPitch;
 unsigned long previousTime;
-float Gyroscope::last_value = 0.0;
 
 void Gyroscope::init()
 {
+
     if (!mpu.begin()) {
-        printDebug("[GYRO] MPU6050 connection failed. Please check your connections.");
+        printDebug("MPU6050 connection failed. Please check your connections.");
         Gyroscope::error = true;
         while (1);
     }
+
 }
 
 void Gyroscope::calibrateMPU6050() {
-  printDebug("[GYRO] Calibrando...");
 
   for (int i = 0; i < 1000; i++) {
     sensors_event_t accel, gyro, temp;
@@ -49,26 +49,31 @@ float Gyroscope::gyroscopeRoutine(){
     float initial_position, aux_value, movement_result; 
     
 
-		//calibra
-		Gyroscope::calibrateMPU6050();
-		//le o primeiro valor
-		initial_position = Gyroscope::calculatePitch();
+    //calibra
+    Gyroscope::calibrateMPU6050();
 
-		//le o segundo valor e salva a diferença 
-		aux_value = Gyroscope::calculatePitch();
-		if ((initial_position - aux_value) < 0){
-			movement_result = 0;
-		}
-		else {
-			movement_result = initial_position - aux_value;
-		}
+    //le o primeiro valor
+    initial_position = Gyroscope::calculatePitch();
+
+    //le o segundo valor e salva a diferença 
+    aux_value = Gyroscope::calculatePitch();
+    if ((aux_value - initial_position) < 0){
+        movement_result = 0;
+    }
+    else{
+        movement_result = aux_value - initial_position;
+    }
 
     // tempo de duracao da medida
+    Serial.println("fim da calibração, começando medição:");
+
     unsigned long startTime = millis();
     while (millis() - startTime < gyroscope_time) {
         aux_value = Gyroscope::calculatePitch();
-        if ((initial_position - aux_value) > movement_result){
-            movement_result = initial_position - aux_value;
+        
+        if ((aux_value - initial_position) > movement_result){
+            //Serial.println(aux_value);
+            movement_result = aux_value - initial_position;
         }
         // Add some delay to avoid constant checking, adjust as needed
         //delay(100); 
@@ -89,21 +94,14 @@ void Gyroscope::testGyroscope(){
 
 }
 
+angle Gyroscope::acquire(){
+    return 90;
+}
+
 angle Gyroscope::getLastValue(){
-    return last_value;
+    return 90;
 }
 
 void Gyroscope::sendLastValue(){
-    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(4));
 
-    (*message_document)[MESSAGE_KEYS::CODE] = GYROSCOPE_MESSAGE;
-    (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
-
-    JsonObject body = 
-      (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
-
-    body[MESSAGE_KEYS::ANGLE] = 
-      last_value;
-
-    MessageHandler::sendMessage(message_document);
 }

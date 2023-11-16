@@ -37,28 +37,42 @@ float Potentiometer::voltageSet(float target_voltage)
     
     volatile bool found = false;
     volatile float current_voltage;
+   // Serial.println("last erro");
+    //Serial.println(last_erro);
     while (!found) {
         current_voltage = Potentiometer::getCorrectedVoltage();
 
         // Simula ajustes na tensão (aumentar ou diminuir)
+       // Serial.println("----------------------------- current and target");
+       // Serial.println(current_voltage);
+        //Serial.println(target_voltage);
+        erro = fabs(target_voltage - current_voltage);
         if (current_voltage < target_voltage) {
             Potentiometer::increase(1);
             last_mov_up = true;
+            //Serial.println("increased");
         } else {
             Potentiometer::decrease(1);
             last_mov_up = false;
+           // Serial.println("decreased");
         }
 
         current_voltage = Potentiometer::getCorrectedVoltage();
- 
+        //Serial.println("new voltage");
+        //Serial.println(current_voltage);
         last_erro = erro;
-        erro = target_voltage - current_voltage;
-
-        if (abs(last_erro)<abs(erro)){
+        erro = fabs(target_voltage - current_voltage);
+        //delay(5000);
+        //Serial.println(current_voltage);
+        if (fabs(last_erro)<fabs(erro)){
             //delay(1000);
-            /*Serial.println("erros");
-            Serial.println(last_erro);
-            Serial.println(erro);*/
+            //Serial.println("END 1 >>>>>>>>>>>>>>>>>>>>>>>>>>>");
+            
+            //Serial.print(last_erro);
+           //Serial.print("<");
+            //Serial.println(erro);
+            //Serial.println(last_erro);
+           // Serial.println(erro);
             found = true;
             if (last_mov_up){
                 Potentiometer::decrease(1);
@@ -66,11 +80,15 @@ float Potentiometer::voltageSet(float target_voltage)
             else{
                 Potentiometer::increase(1);
             }
+            current_voltage = Potentiometer::getCorrectedVoltage();
+            //Serial.println(current_voltage);
+            
         }
-        else if (abs(last_erro)==abs(erro)){
-            Serial.println("erros2");
+        else if (fabs(last_erro)==fabs(erro)){
+            //Serial.println("END 2 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
             found = true;
         }
+        delay(100);
         
     }
 
@@ -84,6 +102,7 @@ void Potentiometer::pulse(int steps)
         delayMicroseconds(10);
         digitalWrite(POTENTIOMETER_PIN_INCREMENT, LOW);
         delayMicroseconds(10);
+        
     }
 }
 
@@ -94,6 +113,8 @@ inline void Potentiometer::increase(int steps)
     
     pulse(steps);
 
+    //digitalWrite(POTENTIOMETER_PIN_CS, HIGH);
+    //delay(20);
     //printDebug("Voltage up");
 }
 
@@ -105,5 +126,7 @@ inline void Potentiometer::decrease(int steps)
 
     pulse(steps);
 
+    //digitalWrite(POTENTIOMETER_PIN_CS, HIGH);
+    //delay(20);
     //printDebug("Voltage down");
 }

@@ -20,25 +20,68 @@ void setup() {
 	Session::init();
 	Gyroscope::init();
 	MessageHandler::init();
-	MessageHandler::start();
-}
-float voltage = 0.5;
-void loop() {
-
-	float result;
+	Gyroscope::init();
 	
-	result = Potentiometer::voltageSet(voltage);
+	Serial.begin(115200);
+	Gyroscope::calibrateMPU6050;
+	MessageHandler::start();
+	
+}
+float voltage = 0.1;
+int direcao = 1;
+
+void testeControleTensao(){
+	/*
+	for (int i = 0; i<=20 ; i++ ){
+		Serial.println(Potentiometer::getCorrectedVoltage());
+		Potentiometer::increase(1);
+		delay (2000);
+		Serial.println(Potentiometer::getCorrectedVoltage());
+		
+	}
+	
+	for (int i = 0; i<=20; i++ ){
+		Serial.println(Potentiometer::getCorrectedVoltage());
+		Potentiometer::decrease(1);
+		delay (2000);
+		Serial.println(Potentiometer::getCorrectedVoltage());
+		
+	}*/
+	
+	float result;
+	Serial.println("-----------------------------------inicio---------------------------");	
+	Potentiometer::voltageSet(voltage);
+	result = Potentiometer::getCorrectedVoltage();
 	Serial.println("voltagem");	
 	Serial.println(voltage);
 	Serial.println("resultado");
 	Serial.println(result);
-	voltage = voltage+0.5;
-	delay(5000);
-	if ( voltage >=3){
-		voltage = 0.5;
+	if (fabs(voltage-result)>1)
+	{
+		delay(1000000);
 	}
+	delay(1000);
+	voltage += 0.1 * direcao;
+
+    // Verifica se o valor atingiu 3.0 ou 0.0 para inverter a direção
+    if (voltage >= 3.0 || voltage <= 0.0) {
+        direcao *= -1; // Inverte a direção
+    }
+	
 	//MessageHandler::loop();
 	//BatteryMonitor::loop();
+}
+
+void testMedidasGiroscopio(){
+	Serial.println(Gyroscope::calculatePitch());
+	delay(500);
+}
+
+void loop() {
+	Serial.println("comecando uma rotina");
+	Serial.println(Gyroscope::gyroscopeRoutine());
+	Serial.println("fim da rotina");
+	delay(500);
 }
 
 

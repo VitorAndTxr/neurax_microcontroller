@@ -12,13 +12,15 @@ float Gyroscope::last_value = 0.0;
 void Gyroscope::init()
 {
     if (!mpu.begin()) {
-        printDebug("MPU6050 connection failed. Please check your connections.");
+        printDebug("[GYRO] MPU6050 connection failed. Please check your connections.");
         Gyroscope::error = true;
         while (1);
     }
 }
 
 void Gyroscope::calibrateMPU6050() {
+  printDebug("[GYRO] Calibrando...");
+
   for (int i = 0; i < 1000; i++) {
     sensors_event_t accel, gyro, temp;
     mpu.getEvent(&accel, &gyro, &temp);
@@ -43,12 +45,11 @@ float Gyroscope::calculatePitch() {
 
 float Gyroscope::gyroscopeRoutine(){
     
-    if (xSemaphoreTake(i2cMutex, portMAX_DELAY)) {
+    //if (xSemaphoreTake(i2cMutex, portMAX_DELAY)) {
 		float initial_position, aux_value, movement_result; 
 
 		//calibra
 		Gyroscope::calibrateMPU6050();
-
 		//le o primeiro valor
 		initial_position = Gyroscope::calculatePitch();
 
@@ -61,6 +62,7 @@ float Gyroscope::gyroscopeRoutine(){
 			movement_result = initial_position - aux_value;
 		}
 
+    printDebug("[GYRO] Calibracao concluida.");
 		unsigned long startTime = millis();
 		// tempo de duracao da medida
 		while (millis() - startTime < GYROSCOPE_TIME) {
@@ -68,15 +70,17 @@ float Gyroscope::gyroscopeRoutine(){
 			if ((initial_position - aux_value) > movement_result){
 				movement_result = initial_position - aux_value;
 			}
+      //Serial.println(movement_result, 2);
 			// Add some delay to avoid constant checking, adjust as needed
 			//delay(100); 
 		}
 		last_value = movement_result;
-		xSemaphoreGive(i2cMutex);
+		//xSemaphoreGive(i2cMutex);
+    Serial.println(movement_result, 2);
 		return movement_result;
-    } else {
-      	return 0.0;
-    }
+    //} else {
+    //  	return 0.0;
+    //}
 }
 
 angle Gyroscope::getLastValue(){
@@ -84,7 +88,7 @@ angle Gyroscope::getLastValue(){
 }
 
 void Gyroscope::sendLastValue(){
-    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(3));
+    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(4));
 
     (*message_document)[MESSAGE_KEYS::CODE] = GYROSCOPE_MESSAGE;
     (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
@@ -95,5 +99,5 @@ void Gyroscope::sendLastValue(){
     body[MESSAGE_KEYS::ANGLE] = 
       last_value;
 
-    MessageHandler::addMessageToQueue(message_document);
+    MessageHandler::sendMessage(message_document);
 }

@@ -76,7 +76,7 @@ void Session::resume() {
 }
 
 void Session::singleStimulus() {
-	detectionAndStimulation();
+	Fes::begin();
 }
 
 void Session::sendSessionStatus(){
@@ -116,7 +116,7 @@ void Session::sendSessionStatus(){
 	status_message_parameters[MESSAGE_KEYS::parameters::STIMULI_DURATION] =
 		Fes::parameters.fes_duration_ms;
 
-	MessageHandler::addMessageToQueue(message_document);
+	MessageHandler::sendMessage(message_document);
 }
 
 TickType_t Session::getTicksDelayBetweenStimuli() {

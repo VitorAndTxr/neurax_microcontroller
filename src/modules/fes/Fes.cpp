@@ -62,33 +62,36 @@ void Fes::fesLoop() {
 #if FES_MODULE_ENABLE
     int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
-
+    printDebug("[FES] fesLoop");
     Fes::stimulating = true;
-    while (!Fes::emergency_stop && stimulating)
+    while (/*!Fes::emergency_stop && */stimulating)
     {
+        printDebug("[FES] estimulando");
         positiveHBridge();
-        vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
+        delayMicroseconds(600);
 
         negativeHBridge();
-        vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
+        delayMicroseconds(600);
 
         Fes::hBridgeReset();
-        delayMicroseconds(remaining_time);
+        delay(100);
     }
+    printDebug("[FES] Estimulacao parada.");
 #endif
 }
 
 void Fes::begin() {
+    printDebug("[FES] Criando timer...");
     fesTimer = xTimerCreate(
         "FES timer",           // Nome do temporizador (para fins de depuração)
-        pdMS_TO_TICKS(Fes::parameters.fes_duration_ms),  // Período em milissegundos
+        pdMS_TO_TICKS(5000),  // Período em milissegundos
         pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
         (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
         Fes::stopFes        // Função a ser chamada quando o temporizador expirar
     );
-
     // Verificação se o temporizador foi criado com sucesso
     if (fesTimer != NULL) {
+        printDebug("[FES] Timer criado. Iniciando estimulacao...");
         xTimerStart(fesTimer, 0);
         Fes::fesLoop();
     } else {
@@ -98,9 +101,13 @@ void Fes::begin() {
 
 void Fes::stopFes(void * parameters) {
     Fes::stimulating = false;
+    printDebug("[FES] Timer concluido.");
+    printDebug("[FES] Parando estimulacao...");
 }
+
 void Fes::stopFes() {
     Fes::stimulating = false;
+    printDebug("[FES] Parando estimulacao...");
 }
 
 void Fes::setParameters(int fes_duration_ms, int pulse_width_ms, double frequency) {

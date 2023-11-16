@@ -142,14 +142,14 @@ void Semg::testTrigger(int test_duration_seconds) {
 }
 
 void Semg::sendTriggerMessage() {
-	DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(512));
+	DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(2));
     if (!message_document) {
         printDebug("teste tstes");
     }
     (*message_document)[MESSAGE_KEYS::CODE] = MESSAGE_CODE_TRIGGER;
     (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
 
-    MessageHandler::addMessageToQueue(message_document);
+    MessageHandler::sendMessage(message_document);
 }
 
 void Semg::enableSensor() {

@@ -16,7 +16,6 @@ static const char command[] = "delay "; // Note the space!
 class MessageHandler
 {
 private:
-    static const int queue_size;
     static QueueHandle_t message_handler_queue;
     static void interpretMessage(String data);
     static void handleHandshake();
@@ -26,15 +25,13 @@ private:
     static String getMessageMethod(DynamicJsonDocument &message);
     static TaskHandle_t task_handle;
     static void handleIncomingMessages();
-    static void handleOutgoingMessages();
 public:
     MessageHandler() = delete;
     ~MessageHandler() = delete;
     static void init();
     static void start();
     static void loop(void * parameters);
-    static bool addMessageToQueue(const DynamicJsonDocument* message);
-    static bool readMessageFromQueue(DynamicJsonDocument* message);
+    static void sendMessage(DynamicJsonDocument* message);
 };
 
 #endif

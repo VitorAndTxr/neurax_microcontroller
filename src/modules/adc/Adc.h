@@ -4,6 +4,8 @@
 #include "../debug/Debug.h"
 #include "../../globals.h"
 
+static const char* TAG_ADC = "ADC";
+
 class Adc
 {
 private:

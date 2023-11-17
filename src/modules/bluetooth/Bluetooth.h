@@ -4,7 +4,7 @@
 #include <HardwareSerial.h>
 #include <ArduinoJson.h>
 
-
+static const char* TAG_BLU = "BLU";
 
 class Bluetooth
 {

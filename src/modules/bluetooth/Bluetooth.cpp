@@ -4,16 +4,19 @@ bool Bluetooth::connected = false;
 HardwareSerial BTSerial(2); // Use UART2 (TX2, RX2) for Bluetooth
 
 void Bluetooth::init() {
+	ESP_LOGI(TAG_BLU, "Configuring Bluetooth Module...");
+
     pinMode(BLUETOOTH_MODULE_STATUS_PIN, INPUT); 
     BTSerial.begin(9600);  // Bluetooth module baud rate
     //BTSerial.write("AT+NAMENeuroEstimulator");
-    //delay(500);
+    delay(500);
     //BTSerial.flush();
     //BTSerial.write("AT+BAUD4");
     //BTSerial.write(BLUETOOTH_AT_SET_BAUDRATE_115200);
     /* BTSerial.end(true);
     BTSerial.begin(115200); */
     //Bluetooth::waitForConnection();
+	ESP_LOGI(TAG_BLU, "Configuration done.");
 }
 
 bool Bluetooth::isConnected() {
@@ -21,9 +24,9 @@ bool Bluetooth::isConnected() {
 }
 
 void Bluetooth::waitForConnection() {
-    Serial.println("[BLU] Esperando conexao...");
+	ESP_LOGI(TAG_BLU, "Waiting for connection...");
 	while (!Bluetooth::isConnected()) {}
-    Serial.println("[BLU] Conectado");
+	ESP_LOGI(TAG_BLU, "Conected to app!");
 }
 
 String Bluetooth::readData() {

@@ -9,16 +9,13 @@
 #include "../bluetooth/Bluetooth.h"
 #include "../session/Session.h"
 
-static const uint8_t buf_len = 255;     // Size of buffer to look for command
-static const char command[] = "delay "; // Note the space!
-
+static const char* TAG_MSG = "MSG";
 
 class MessageHandler
 {
 private:
     static QueueHandle_t message_handler_queue;
     static void interpretMessage(String data);
-    static void handleHandshake();
     static void handleGyroscopeMessage(DynamicJsonDocument &message);
     static void handleSessionParametersMessage(DynamicJsonDocument &message);
     static int getMessageCode(DynamicJsonDocument &message);

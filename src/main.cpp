@@ -9,9 +9,14 @@
 #include "modules/bluetooth/Bluetooth.h"
 #include "modules/debug/Debug.h"
 
+static const char* TAG_MAIN = "MAIN";
+
 void setup() {
 	Serial.begin(115200);
-	printDebug("Iniciando esp");
+	
+	esp_log_level_set("*", ESP_LOG_DEBUG);
+	esp_log_system_timestamp();
+	ESP_LOGI(TAG_MAIN, "Iniciando firmware NeuroEstimulator...");
 
 	Adc::init();
 	Fes::init();
@@ -24,6 +29,8 @@ void setup() {
 	
 	Serial.begin(115200);
 	Gyroscope::calibrateMPU6050;
+	ESP_LOGI(TAG_MAIN, "Setup concluido.");
+
 	MessageHandler::start();
 	
 }

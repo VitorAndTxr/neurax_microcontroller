@@ -8,7 +8,6 @@ float FesParameters::amplitude = DEFAULT_AMPLITUDE;
 bool Fes::emergency_stop = false;
 TimerHandle_t Fes::fesTimer = NULL;
 
-
 TaskHandle_t Fes::fes_loop_handle = NULL;
 volatile bool Fes::stimulating = false;
 
@@ -35,9 +34,11 @@ void Fes::hBridgeReset(){
 
 void Fes::init()
 {
+	ESP_LOGI(TAG_FES, "Setup...");
     Fes::initGpio();
     Fes::setParameters();
     Fes::hBridgeReset();
+	ESP_LOGI(TAG_FES, "Setup done.");
 }
 
 void Fes::initGpio()
@@ -48,13 +49,11 @@ void Fes::initGpio()
 #endif
 }
 
-void Fes::increaseAmplitude(int steps)
-{
+void Fes::increaseAmplitude(int steps) {
     potentiometer.increase();
 }
 
-void Fes::decreaseAmplitude(int steps)
-{
+void Fes::decreaseAmplitude(int steps) {
     potentiometer.decrease();
 }
 
@@ -62,11 +61,11 @@ void Fes::fesLoop() {
 #if FES_MODULE_ENABLE
     int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
-    printDebug("[FES] fesLoop");
+
+	ESP_LOGI(TAG_FES, "Starting stimulation");
+
     Fes::stimulating = true;
-    while (/*!Fes::emergency_stop && */stimulating)
-    {
-        printDebug("[FES] estimulando");
+    while (/*!Fes::emergency_stop && */stimulating) {
         positiveHBridge();
         delayMicroseconds(600);
 
@@ -76,12 +75,12 @@ void Fes::fesLoop() {
         Fes::hBridgeReset();
         delay(100);
     }
-    printDebug("[FES] Estimulacao parada.");
+	ESP_LOGI(TAG_FES, "Stoped stimulation");
 #endif
 }
 
 void Fes::begin() {
-    printDebug("[FES] Criando timer...");
+	ESP_LOGI(TAG_FES, "Creating timer...");
     fesTimer = xTimerCreate(
         "FES timer",           // Nome do temporizador (para fins de depuração)
         pdMS_TO_TICKS(5000),  // Período em milissegundos
@@ -91,26 +90,27 @@ void Fes::begin() {
     );
     // Verificação se o temporizador foi criado com sucesso
     if (fesTimer != NULL) {
-        printDebug("[FES] Timer criado. Iniciando estimulacao...");
+		ESP_LOGI(TAG_FES, "Starting timer");
         xTimerStart(fesTimer, 0);
         Fes::fesLoop();
     } else {
-        printDebug("Erro ao criar o temporizador do FES!");
+		ESP_LOGE(TAG_FES, "Error creating timer!");
     }
 }
 
 void Fes::stopFes(void * parameters) {
     Fes::stimulating = false;
-    printDebug("[FES] Timer concluido.");
-    printDebug("[FES] Parando estimulacao...");
+	ESP_LOGI(TAG_FES, "Timer completed");
+	ESP_LOGI(TAG_FES, "Stopping FES...");
 }
 
 void Fes::stopFes() {
     Fes::stimulating = false;
-    printDebug("[FES] Parando estimulacao...");
+	ESP_LOGI(TAG_FES, "Stopping FES...");
 }
 
 void Fes::setParameters(int fes_duration_ms, int pulse_width_ms, double frequency) {
+	ESP_LOGI(TAG_FES, "Setting parameters");
     Fes::parameters.fes_duration_ms = fes_duration_ms;
     Fes::parameters.pulse_width_ms = pulse_width_ms;
     Fes::parameters.frequency = frequency;

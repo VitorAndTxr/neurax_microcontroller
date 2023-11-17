@@ -9,13 +9,17 @@ TaskHandle_t MessageHandler::task_handle = NULL;
 void MessageHandler::init() {
     Bluetooth::init();
     if(!Bluetooth::isConnected) {
+		ESP_LOGI(TAG_MSG, "Bluetooth not connected.");
         Bluetooth::waitForConnection();
     }
 }
 
 void MessageHandler::start() {
     // TODO check memory
-    xTaskCreatePinnedToCore(
+	BaseType_t xReturned;
+	ESP_LOGI(TAG_MSG, "Creating Message Handler task...");
+
+    xReturned = xTaskCreatePinnedToCore(
 		MessageHandler::loop,
 		"Session task",
 		4096,
@@ -25,10 +29,19 @@ void MessageHandler::start() {
 		secondary_cpu
 	);
 
+	if (xReturned == pdPASS) {
+		ESP_LOGI(TAG_MSG, "Success creating Message Handler task.");
+	}
+	else {
+		ESP_LOGE(TAG_MSG, "Error creating Message Handler task: errCOULD_NOT_ALLOCATE_REQUIRED_MEMORY");
+	}
+
 }
 
 void MessageHandler::loop(void * parameters)
 {
+	ESP_LOGI(TAG_MSG, "Starting Message Handler loop");
+
     while (true) {
         if (Bluetooth::isConnected()) {
             MessageHandler::handleIncomingMessages();
@@ -42,12 +55,14 @@ void MessageHandler::loop(void * parameters)
 void MessageHandler::sendMessage(DynamicJsonDocument* message) {
     String serialized_message;
     serializeJson(*message, serialized_message);
-    printDebug("[MSG] Serializado: ");
-    printDebug(serialized_message);
+
+	ESP_LOGI(TAG_MSG, "Serialized message:");
+	ESP_LOGI(TAG_MSG, "%s", serialized_message.c_str());
+
     if (Bluetooth::isConnected()) {
-        printDebug("[MSG] Enviando...");
+		ESP_LOGI(TAG_MSG, "Sending message...");
 	    Bluetooth::sendData(serialized_message);
-        printDebug("[MSG] Enviado!");
+		ESP_LOGI(TAG_MSG, "Message sent!");
     }
     delay(200);
     //(*message).clear();
@@ -57,8 +72,9 @@ void MessageHandler::handleIncomingMessages() {
     String data = Bluetooth::readData();
 
     if (!data.isEmpty()) {
-        printDebug("Dado recebido -->");
-        printDebug(data);
+		ESP_LOGI(TAG_MSG, "=== Received data ===");
+		ESP_LOGI(TAG_MSG, "--->");
+		ESP_LOGI(TAG_MSG, "%s", data.c_str());
         MessageHandler::interpretMessage(data);
     }
 }
@@ -69,56 +85,55 @@ void MessageHandler::interpretMessage(String data)
     DeserializationError error = deserializeJson(message, data);
 
     if (error) {
-        printDebug("[MSG] interpretMessage: Error parsing JSON: ");
-        printDebug(error.c_str());
+		ESP_LOGE(TAG_MSG, "Error parsing JSON: %s", error.c_str());
         return;
     } 
     
     switch (getMessageCode(message)) {
         case GYROSCOPE_MESSAGE:
-			printDebug("[MSG] Giroscópio");
+			ESP_LOGI(TAG_MSG, "Giroscópio");
             MessageHandler::handleGyroscopeMessage(message);
             break;
             
         case (SESSION_COMMANDS::START):
-			printDebug("[MSG] SESSION_COMMANDS::START");
+			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::START");
 
             Session::start();
             break;
 
         case SESSION_COMMANDS::STOP:
-			printDebug("[MSG] SESSION_COMMANDS::STOP");
+			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::STOP");
             Session::stop();
             break;
 
         case SESSION_COMMANDS::PAUSE:
-			printDebug("[MSG] SESSION_COMMANDS::PAUSE");
+			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::PAUSE");
 		
             Session::pause();
             break;
 
         case SESSION_COMMANDS::RESUME:
-			printDebug("[MSG] SESSION_COMMANDS::RESUME");
+			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::RESUME");
             Session::resume();
             break;
 
         case SESSION_COMMANDS::SINGLE_STIMULUS:
-			printDebug("[msg] SESSION_COMMANDS::SINGLE_STIMULUS");
+			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::SINGLE_STIMULUS");
             Fes::begin();
             break;
 
         case SESSION_COMMANDS::PARAMETERS:
-			printDebug("[msg] SESSION_COMMANDS::PARAMETERS");
+			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::PARAMETERS");
             MessageHandler::handleSessionParametersMessage(message);
             break;
 		
 		case MESSAGE_CODE_TRIGGER:
-			printDebug("[MSG] Trigger test");
+			ESP_LOGI(TAG_MSG, "Trigger test");
 			Semg::testTrigger();
 			break;
 
         default:
-			printDebug("[MSG] Unknown message code");
+			ESP_LOGW(TAG_MSG, "Unknown message code");
             break;
     }
     //message.clear();
@@ -155,10 +170,12 @@ void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
 
 void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message) {
     if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
+			ESP_LOGI(TAG_MSG, "Parsing received session parameters");
+
             JsonObject statusObj = message[MESSAGE_KEYS::BODY].as<JsonObject>();
 
-            String serialized_message;
-            serializeJson(statusObj, serialized_message);
+            //String serialized_message;
+            //serializeJson(statusObj, serialized_message);
 
             //Gyroscope::sendLastValue();
             //Semg::sendTriggerMessage();
@@ -176,5 +193,12 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
             Fes::parameters.fes_duration_ms = fes_duration;
 
             Semg::parameters.difficulty = difficulty;
+			
+			ESP_LOGD(TAG_MSG, "Amplitude: %lf", amplitude);
+			ESP_LOGD(TAG_MSG, "Frequency: %lf", frequency);
+			ESP_LOGD(TAG_MSG, "Pulse width (ms): %lf", pulse_width);
+			ESP_LOGD(TAG_MSG, "FES stimulation duration (ms): %lf", fes_duration);
+			ESP_LOGD(TAG_MSG, "SEMG difficulty: %lf", difficulty);
+
     }
 }

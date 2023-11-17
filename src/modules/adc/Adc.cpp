@@ -16,12 +16,7 @@ void Adc::init()
     }
 }
 
-float Adc::getValue(int input) {
-    if (xSemaphoreTake(i2cMutex, portMAX_DELAY)) {
-        int16_t value = ads.computeVolts(ads.readADC_SingleEnded(input));
-        xSemaphoreGive(i2cMutex);
-        return value;
-    } else {
-        return 0.0f;
-    }
+float Adc::getValue(int input)
+{
+    return ads.computeVolts(ads.readADC_SingleEnded(input));
 }

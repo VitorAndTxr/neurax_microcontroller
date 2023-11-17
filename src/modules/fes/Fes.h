@@ -5,6 +5,8 @@
 #include "../potentiometer/Potentiometer.h"
 #include "../../globals.h"
 
+static const char* TAG_FES = "FES";
+
 struct FesParameters {
     static int fes_duration_ms;
     static int pulse_width_ms;

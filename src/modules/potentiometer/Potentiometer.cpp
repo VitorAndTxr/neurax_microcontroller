@@ -1,36 +1,30 @@
 #include "Potentiometer.h"
 #include "modules/adc/Adc.h"
 
-Potentiometer::Potentiometer()
-{
-}
-
-void Potentiometer::init()
-{
+void Potentiometer::init() {
     pinMode(POTENTIOMETER_PIN_INCREMENT, OUTPUT);
     pinMode(POTENTIOMETER_PIN_UP_DOWN, OUTPUT);
     pinMode(POTENTIOMETER_PIN_CS, OUTPUT);
-
-}
-
-Potentiometer::~Potentiometer()
-{
 }
 
 float Potentiometer::getCorrectedVoltage()
 {
     //read the voltage of the potentiometer using the adc 
+	// TODO define pin
     float voltage_adc = Adc::getValue(0);
     
     //corrige o valor devido a divisão de tensão
+	// TODO
     float current_voltage = voltage_adc;
+	ESP_LOGD(TAG_POT, "Corrected voltage: %lf", current_voltage);
 
     return current_voltage;
 }
 
 float Potentiometer::voltageSet(float target_voltage)
 {
-    // 
+	ESP_LOGI(TAG_POT, "Setting voltage...");
+    
     volatile bool last_mov_up = false;
     volatile float erro, last_erro;
     last_erro = 20;
@@ -74,22 +68,20 @@ float Potentiometer::voltageSet(float target_voltage)
             //Serial.println(last_erro);
            // Serial.println(erro);
             found = true;
-            if (last_mov_up){
+            if (last_mov_up) {
                 Potentiometer::decrease(1);
             }
-            else{
+            else {
                 Potentiometer::increase(1);
             }
             current_voltage = Potentiometer::getCorrectedVoltage();
             //Serial.println(current_voltage);
-            
         }
-        else if (fabs(last_erro)==fabs(erro)){
+        else if (fabs(last_erro)==fabs(erro)) {
             //Serial.println("END 2 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
             found = true;
         }
         delay(100);
-        
     }
 
     return Potentiometer::getCorrectedVoltage();
@@ -112,10 +104,8 @@ inline void Potentiometer::increase(int steps)
     digitalWrite(POTENTIOMETER_PIN_CS, LOW);
     
     pulse(steps);
+	ESP_LOGI(TAG_POT, "Voltage up");
 
-    //digitalWrite(POTENTIOMETER_PIN_CS, HIGH);
-    //delay(20);
-    //printDebug("Voltage up");
 }
 
 
@@ -126,7 +116,5 @@ inline void Potentiometer::decrease(int steps)
 
     pulse(steps);
 
-    //digitalWrite(POTENTIOMETER_PIN_CS, HIGH);
-    //delay(20);
-    //printDebug("Voltage down");
+	ESP_LOGI(TAG_POT, "Voltage down");
 }

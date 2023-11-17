@@ -4,6 +4,8 @@
 #include "../fes/Fes.h"
 #include "../session/Session.h"
 
+static const char* TAG_EMR = "EMR";
+
 class EmergencyButton
 {
 private:

@@ -4,16 +4,16 @@
 #include <Arduino.h>
 #include "../debug/Debug.h"
 
+static const char* TAG_POT = "POT";
+
 class Potentiometer
 {
 private:
 
 
 public:
-
-
-    Potentiometer();
-    ~Potentiometer();
+    Potentiometer() = delete;
+    ~Potentiometer() = delete;
     static void init();
     static void pulse(int steps = 1);
     static void increase(int steps = 1);

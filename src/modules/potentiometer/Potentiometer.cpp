@@ -5,17 +5,19 @@ void Potentiometer::init() {
     pinMode(POTENTIOMETER_PIN_INCREMENT, OUTPUT);
     pinMode(POTENTIOMETER_PIN_UP_DOWN, OUTPUT);
     pinMode(POTENTIOMETER_PIN_CS, OUTPUT);
+    //digitalWrite(POTENTIOMETER_PIN_CS, LOW);
+
 }
 
 float Potentiometer::getCorrectedVoltage()
 {
     //read the voltage of the potentiometer using the adc 
 	// TODO define pin
-    float voltage_adc = Adc::getValue(0);
+    float voltage_adc = Adc::getValue(1);
     
     //corrige o valor devido a divisão de tensão
 	// TODO
-    float current_voltage = voltage_adc;
+    float current_voltage = 4 * voltage_adc;
 	ESP_LOGD(TAG_POT, "Corrected voltage: %lf", current_voltage);
 
     return current_voltage;

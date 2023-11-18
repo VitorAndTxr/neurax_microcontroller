@@ -19,7 +19,7 @@ void Adc::init() {
 }
 
 float Adc::getValue(int input) {
-	ESP_LOGD(TAG_ADC, "Reading input %d", input);
+	//ESP_LOGD(TAG_ADC, "Reading input %d", input);
 	float value = ads.computeVolts(ads.readADC_SingleEnded(input));
 	ESP_LOGD(TAG_ADC, "Value: %lf", value);
     return value;

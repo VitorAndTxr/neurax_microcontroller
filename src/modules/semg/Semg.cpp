@@ -3,7 +3,9 @@
 float Semg::filtered_value[SEMG_SAMPLES_PER_VALUE] = {0};
 float Semg::mes[5] = {0};
 float SemgParameters::gain = SEMG_DEFAULT_GAIN;
-float SemgParameters::difficulty = SEMG_DIFFICULTY_DEFAULT;
+float SemgParameters::difficulty = 50;
+//float SemgParameters::difficulty = SEMG_DIFFICULTY_DEFAULT;
+
 float SemgParameters::threshold = 0;
 float Semg::mes_a[2] = {0};
 float Semg::mes_b[2] = {0};
@@ -33,6 +35,8 @@ void Semg::decreaseDifficulty(int decrement) {
 }
 
 inline bool Semg::outputIsInInterval(float lower_limit, float higher_limit){
+	ESP_LOGI(TAG_FES, "Verify Semg %f lower limit: %f", Semg::output, lower_limit);
+    
     return Semg::output >= Semg::parameters.threshold && Semg::output <= SEMG_TRIGGER_THRESHOLD_MAXIMUM;
 }
 
@@ -77,7 +81,7 @@ void Semg::startSamplingTimer() {
     // Verificação se o temporizador foi criado com sucesso
     if (samplingTimer != NULL) {
         xTimerStart(samplingTimer, 0);
-        Fes::fesLoop();
+        //Fes::fesLoop();
     } else {
         printDebug("Erro ao criar o temporizador do FES!");
     }
@@ -153,11 +157,11 @@ void Semg::sendTriggerMessage() {
 }
 
 void Semg::enableSensor() {
-    digitalWrite(SEMG_ENABLE_PIN, HIGH);
+    digitalWrite(SEMG_ENABLE_PIN, LOW);
 }
 
 void Semg::disableSensor() {
-    digitalWrite(SEMG_ENABLE_PIN, LOW);
+    digitalWrite(SEMG_ENABLE_PIN, HIGH);
 }
 
 

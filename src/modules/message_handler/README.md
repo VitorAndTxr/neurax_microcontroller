@@ -81,11 +81,18 @@ Depending on the message's code and method, the message may contain a body with 
     <td></td>
   </tr>
   <tr>
-    <td>4</td>
-    <td>Pause session</td>
+    <td rowspan="2">4</td>
+    <td rowspan="2">Pause session</td>
     <td>x</td>
     <td>App</td>
     <td>ESP32</td>
+    <td>No body.</td>
+    <td></td>
+  </tr>
+    <tr>
+    <td>w</td>
+    <td>ESP32</td>
+    <td>App</td>
     <td>No body.</td>
     <td></td>
   </tr>

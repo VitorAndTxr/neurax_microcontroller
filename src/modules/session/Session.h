@@ -35,13 +35,14 @@ private:
 	TickType_t getTicksDelayBetweenStimuli();
     static void resetSessionStatus(bool session_starting = true);
 	static void delayBetweenStimuli();
-	static void detectionAndStimulation();
 	static TaskHandle_t task_handle;
 	static void suspendSessionTask();
+	static void sendSessionPauseMessage();
 public:
     Session() = delete;
     ~Session() = delete;
 
+	static void detectionAndStimulation();
 	static void loop(void * parameters);
     static void init();
     static void start();

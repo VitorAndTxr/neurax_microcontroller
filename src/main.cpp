@@ -8,25 +8,29 @@
 #include "modules/potentiometer/Potentiometer.h"
 #include "modules/bluetooth/Bluetooth.h"
 #include "modules/debug/Debug.h"
+#include "modules/led/Led.h"
 
 static const char* TAG_MAIN = "MAIN";
+Led LED_POWER(LED_PIN_POWER);
 
 void setup() {
+	LED_POWER.set(true);
 	Serial.begin(115200);
 	
-	esp_log_level_set("*", ESP_LOG_DEBUG);
+	esp_log_level_set("*", ESP_LOG_NONE);
 	esp_log_system_timestamp();
 	ESP_LOGI(TAG_MAIN, "Iniciando firmware NeuroEstimulator...");
-
-	//Adc::init();
-	/*
+	
+	
+	
 	Fes::init();
-	Semg::init();*/
+	Semg::init();
 	Potentiometer::init();
-	/*Session::init();
+	Session::init();
 	Gyroscope::init();
-	//MessageHandler::init();
-	Gyroscope::init();
+	Adc::init();
+	
+	/*//MessageHandler::init();
 	
 	Serial.begin(115200);
 	Gyroscope::calibrateMPU6050;
@@ -35,8 +39,13 @@ void setup() {
 
 	//MessageHandler::start();
 	*/
+
+	//Led led_test(LED_PIN_TRIGGER);
+	//led_test.set(true);
+	//Led led_test2(LED_PIN_FES);
+	//led_test2.set(true);
 }	
-float voltage = 0.1;
+float voltage = 2;
 int direcao = 1;
 
 void testeControleTensao(){
@@ -59,23 +68,41 @@ void testeControleTensao(){
 	
 	float result;
 	Serial.println("-----------------------------------inicio---------------------------");	
-	Potentiometer::voltageSet(4 * voltage);
+	Potentiometer::voltageSet(voltage);
 	result = Potentiometer::getCorrectedVoltage();
 	Serial.println("voltagem");	
-	Serial.println(voltage * 4);
+	Serial.println(voltage);
 	Serial.println("resultado");
 	Serial.println(result);
-	if (fabs(voltage-result)>1)
+	if (fabs(voltage-result)>0.4)
 	{
+		Serial.println("resultado");
 		delay(1000000);
 	}
 	delay(1000);
-	voltage += 0.1 * direcao;
+	voltage += 0.4 * direcao;
 
     // Verifica se o valor atingiu 3.0 ou 0.0 para inverter a direção
-    if (voltage >= 3.0 || voltage <= 0.0) {
+    if (voltage >= 9.2 || voltage <= 2.0) {
         direcao *= -1; // Inverte a direção
     }
+	
+	//MessageHandler::loop();
+	//BatteryMonitor::loop();
+}
+
+void testeControleTensao2(){
+	
+	float voltage2, result2;
+	voltage2 = 5.0;
+	Serial.println("-----------------------------------inicio---------------------------");	
+	Potentiometer::voltageSet(voltage2);
+	result2 = Potentiometer::getCorrectedVoltage();
+	Serial.println("voltagem");	
+	Serial.println(voltage2);
+	Serial.println("resultado");
+	Serial.println(result2);
+	delay(3000);
 	
 	//MessageHandler::loop();
 	//BatteryMonitor::loop();
@@ -142,9 +169,25 @@ void testeControleTensao1(){
 
 	}
 }
+
+void testeMedidasSEMG(){
+	Serial.println(Semg::acquireAverage());
+	if (Semg::isTrigger())
+	{
+
+	}
+	delay(300);
+}
+
+void testesessao(){
+	Session::detectionAndStimulation();
+	delay(300);
+}
 void loop() {
 	//Adc::getValue(1);
-	testeControleTensao1();
+	//testRotinaGiroscopio();
+	//testeMedidasSEMG();
+	testesessao();
 }
 
 

@@ -4,8 +4,10 @@
 #include <Arduino.h>
 #include "../potentiometer/Potentiometer.h"
 #include "../../globals.h"
+#include "../led/Led.h"
 
 static const char* TAG_FES = "FES";
+
 
 struct FesParameters {
     static int fes_duration_ms;
@@ -44,7 +46,7 @@ public:
     static void fesLoopTaskWrapper(void *obj);
     static bool isOn();
     static void stopFes(void * parameters);
-    static void stopFes();
+    //static void stopFes();
     static FesParameters parameters;
 	static bool emergency_stop;
 };

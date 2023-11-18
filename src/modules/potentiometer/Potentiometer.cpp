@@ -62,11 +62,11 @@ float Potentiometer::voltageSet(float target_voltage)
         //Serial.println(current_voltage);
         if (fabs(last_erro)<fabs(erro)){
             //delay(1000);
-            //Serial.println("END 1 >>>>>>>>>>>>>>>>>>>>>>>>>>>");
+            Serial.println("END 1 >>>>>>>>>>>>>>>>>>>>>>>>>>>");
             
-            //Serial.print(last_erro);
-           //Serial.print("<");
-            //Serial.println(erro);
+            Serial.print(last_erro);
+            Serial.print("<");
+            Serial.println(erro);
             //Serial.println(last_erro);
            // Serial.println(erro);
             found = true;
@@ -80,7 +80,7 @@ float Potentiometer::voltageSet(float target_voltage)
             //Serial.println(current_voltage);
         }
         else if (fabs(last_erro)==fabs(erro)) {
-            //Serial.println("END 2 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+            Serial.println("END 2 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
             found = true;
         }
         delay(100);
@@ -93,9 +93,9 @@ void Potentiometer::pulse(int steps)
 {
     for(int i = 0; i< steps; i++){
         digitalWrite(POTENTIOMETER_PIN_INCREMENT, HIGH);
-        delayMicroseconds(10);
+        delay(1);
         digitalWrite(POTENTIOMETER_PIN_INCREMENT, LOW);
-        delayMicroseconds(10);
+        delay(1);
         
     }
 }

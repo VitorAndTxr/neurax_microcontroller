@@ -8,6 +8,9 @@
 #include "../debug/Debug.h"
 #include "../message_handler/MessageHandler.h"
 #include "../../globals.h"
+#include "../led/Led.h"
+
+static const char* TAG_SEMG = "sEMG";
 
 struct SemgParameters {
     static float gain;
@@ -17,8 +20,8 @@ struct SemgParameters {
 class Semg
 {
 private:
-    
     static float filtered_value[SEMG_SAMPLES_PER_VALUE];
+    static float raw_value[SEMG_SAMPLES_PER_VALUE];
     static float mes[5];
 
     static float output;
@@ -54,6 +57,7 @@ public:
 	static TimerHandle_t samplingTimer;
 	static void startSamplingTimer();
 	static void stopSamplingTimer();
+	static void setDifficulty(int difficulty);
 };
 
 #endif

@@ -170,35 +170,34 @@ void MessageHandler::handleGyroscopeMessage(DynamicJsonDocument &message)
 
 void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message) {
     if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
-			ESP_LOGI(TAG_MSG, "Parsing received session parameters");
+		ESP_LOGI(TAG_MSG, "Parsing received session parameters");
 
-            JsonObject statusObj = message[MESSAGE_KEYS::BODY].as<JsonObject>();
+		JsonObject statusObj = message[MESSAGE_KEYS::BODY].as<JsonObject>();
 
-            //String serialized_message;
-            //serializeJson(statusObj, serialized_message);
+		//String serialized_message;
+		//serializeJson(statusObj, serialized_message);
 
-            //Gyroscope::sendLastValue();
-            //Semg::sendTriggerMessage();
-            //Session::sendSessionStatus();
+		//Gyroscope::sendLastValue();
+		//Semg::sendTriggerMessage();
+		//Session::sendSessionStatus();
 
-            float amplitude = statusObj[MESSAGE_KEYS::parameters::AMPLITUDE];
-            float frequency = statusObj[MESSAGE_KEYS::parameters::FREQUENCY];
-            float pulse_width = statusObj[MESSAGE_KEYS::parameters::PULSE_WIDTH];
-            float difficulty = statusObj[MESSAGE_KEYS::parameters::DIFFICULTY];
-            float fes_duration = statusObj[MESSAGE_KEYS::parameters::STIMULI_DURATION];
+		float amplitude = statusObj[MESSAGE_KEYS::parameters::AMPLITUDE];
+		float frequency = statusObj[MESSAGE_KEYS::parameters::FREQUENCY];
+		float pulse_width = statusObj[MESSAGE_KEYS::parameters::PULSE_WIDTH];
+		float difficulty = statusObj[MESSAGE_KEYS::parameters::DIFFICULTY];
+		float fes_duration = statusObj[MESSAGE_KEYS::parameters::STIMULI_DURATION];
 
-            Fes::parameters.amplitude = amplitude;
-            Fes::parameters.frequency = frequency;
-            Fes::parameters.pulse_width_ms = pulse_width;
-            Fes::parameters.fes_duration_ms = fes_duration;
+		Fes::parameters.amplitude = amplitude;
+		Fes::parameters.frequency = frequency;
+		Fes::parameters.pulse_width_ms = pulse_width;
+		Fes::parameters.fes_duration_ms = fes_duration;
 
-            Semg::parameters.difficulty = difficulty;
-			
-			ESP_LOGD(TAG_MSG, "Amplitude: %lf", amplitude);
-			ESP_LOGD(TAG_MSG, "Frequency: %lf", frequency);
-			ESP_LOGD(TAG_MSG, "Pulse width (ms): %lf", pulse_width);
-			ESP_LOGD(TAG_MSG, "FES stimulation duration (ms): %lf", fes_duration);
-			ESP_LOGD(TAG_MSG, "SEMG difficulty: %lf", difficulty);
-
+		Semg::setDifficulty(difficulty);
+		
+		ESP_LOGD(TAG_MSG, "Amplitude: %lf", amplitude);
+		ESP_LOGD(TAG_MSG, "Frequency: %lf", frequency);
+		ESP_LOGD(TAG_MSG, "Pulse width (ms): %lf", pulse_width);
+		ESP_LOGD(TAG_MSG, "FES stimulation duration (ms): %lf", fes_duration);
+		ESP_LOGD(TAG_MSG, "SEMG difficulty: %lf", difficulty);
     }
 }

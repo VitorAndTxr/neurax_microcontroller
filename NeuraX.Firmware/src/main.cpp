@@ -47,9 +47,9 @@ void estimulate(){
   for(int i= 0; i<120; i++){
 
     positiveHbridge();
-    delayMicroseconds(600);
+    delayMicroseconds(300);
     negativeHbridge();
-    delayMicroseconds(600);
+    delayMicroseconds(300);
     hBridgeReset();
     delayMicroseconds(16666);
   }

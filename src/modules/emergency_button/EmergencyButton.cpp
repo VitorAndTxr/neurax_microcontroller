@@ -1,12 +1,12 @@
 #include "EmergencyButton.h"
 
 void EmergencyButton::init() {
-	ESP_LOGI(TAG_EMR, "Setting up interrupt on pin %d [MODE: FALLING]...", PIN_EMERGENCY_BUTTON);
+	ESP_LOGI(TAG_EMR, "Setting up interrupt on pin %d [MODE: RISING]...", PIN_EMERGENCY_BUTTON);
 	
 	attachInterrupt(
 			PIN_EMERGENCY_BUTTON, 
 			EmergencyButton::emergencyStop, 
-			FALLING);
+			RISING);
 }
 
 void EmergencyButton::stop() {

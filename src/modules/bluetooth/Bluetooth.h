@@ -3,6 +3,7 @@
 
 #include <HardwareSerial.h>
 #include <ArduinoJson.h>
+#include "../led/Led.h"
 
 static const char* TAG_BLU = "BLU";
 

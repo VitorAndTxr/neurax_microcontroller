@@ -5,17 +5,19 @@ void Potentiometer::init() {
     pinMode(POTENTIOMETER_PIN_INCREMENT, OUTPUT);
     pinMode(POTENTIOMETER_PIN_UP_DOWN, OUTPUT);
     pinMode(POTENTIOMETER_PIN_CS, OUTPUT);
+    //digitalWrite(POTENTIOMETER_PIN_CS, LOW);
+
 }
 
 float Potentiometer::getCorrectedVoltage()
 {
     //read the voltage of the potentiometer using the adc 
 	// TODO define pin
-    float voltage_adc = Adc::getValue(0);
+    float voltage_adc = Adc::getValue(1);
     
     //corrige o valor devido a divisão de tensão
 	// TODO
-    float current_voltage = voltage_adc;
+    float current_voltage = 4 * voltage_adc;
 	ESP_LOGD(TAG_POT, "Corrected voltage: %lf", current_voltage);
 
     return current_voltage;
@@ -60,11 +62,11 @@ float Potentiometer::voltageSet(float target_voltage)
         //Serial.println(current_voltage);
         if (fabs(last_erro)<fabs(erro)){
             //delay(1000);
-            //Serial.println("END 1 >>>>>>>>>>>>>>>>>>>>>>>>>>>");
+            Serial.println("END 1 >>>>>>>>>>>>>>>>>>>>>>>>>>>");
             
-            //Serial.print(last_erro);
-           //Serial.print("<");
-            //Serial.println(erro);
+            Serial.print(last_erro);
+            Serial.print("<");
+            Serial.println(erro);
             //Serial.println(last_erro);
            // Serial.println(erro);
             found = true;
@@ -78,7 +80,7 @@ float Potentiometer::voltageSet(float target_voltage)
             //Serial.println(current_voltage);
         }
         else if (fabs(last_erro)==fabs(erro)) {
-            //Serial.println("END 2 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
+            Serial.println("END 2 <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<");
             found = true;
         }
         delay(100);
@@ -91,9 +93,9 @@ void Potentiometer::pulse(int steps)
 {
     for(int i = 0; i< steps; i++){
         digitalWrite(POTENTIOMETER_PIN_INCREMENT, HIGH);
-        delayMicroseconds(10);
+        delay(1);
         digitalWrite(POTENTIOMETER_PIN_INCREMENT, LOW);
-        delayMicroseconds(10);
+        delay(1);
         
     }
 }

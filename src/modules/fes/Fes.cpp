@@ -11,6 +11,8 @@ TimerHandle_t Fes::fesTimer = NULL;
 TaskHandle_t Fes::fes_loop_handle = NULL;
 volatile bool Fes::stimulating = false;
 
+Led LED_FES(LED_PIN_FES);
+
 void negativeHBridge(){
 #if FES_MODULE_ENABLE
     digitalWrite(H_BRIDGE_INPUT_2, LOW);
@@ -62,10 +64,13 @@ void Fes::fesLoop() {
     int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
     int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
 
+	Potentiometer::voltageSet(Fes::parameters.amplitude);
 	ESP_LOGI(TAG_FES, "Starting stimulation");
-
+	LED_FES.set(true);
     Fes::stimulating = true;
-    while (/*!Fes::emergency_stop && */stimulating) {
+	// TODO emergency stop
+    while (!Fes::emergency_stop && stimulating) {
+        //Serial.println("estimulando 3 ---------");
         positiveHBridge();
         delayMicroseconds(600);
 
@@ -76,6 +81,7 @@ void Fes::fesLoop() {
         delay(100);
     }
 	ESP_LOGI(TAG_FES, "Stoped stimulation");
+	LED_FES.set(false);
 #endif
 }
 
@@ -101,14 +107,14 @@ void Fes::begin() {
 void Fes::stopFes(void * parameters) {
     Fes::stimulating = false;
 	ESP_LOGI(TAG_FES, "Timer completed");
-	ESP_LOGI(TAG_FES, "Stopping FES...");
+	ESP_LOGI(TAG_FES, "Stopping FES timer...");
 }
-
+/*
 void Fes::stopFes() {
     Fes::stimulating = false;
 	ESP_LOGI(TAG_FES, "Stopping FES...");
 }
-
+*/
 void Fes::setParameters(int fes_duration_ms, int pulse_width_ms, double frequency) {
 	ESP_LOGI(TAG_FES, "Setting parameters");
     Fes::parameters.fes_duration_ms = fes_duration_ms;

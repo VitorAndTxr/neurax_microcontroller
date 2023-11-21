@@ -53,7 +53,7 @@ public:
     static SemgParameters parameters;
 	static void sendTriggerMessage();
 	static void testTrigger(int test_duration = SEMG_DEFAULT_TEST_DURATION_SECONDS);
-	static void samplingCallback(void * obj);
+	static void samplingCallback(TimerHandle_t pxTimer);
 	static TimerHandle_t samplingTimer;
 	static void startSamplingTimer();
 	static void stopSamplingTimer();

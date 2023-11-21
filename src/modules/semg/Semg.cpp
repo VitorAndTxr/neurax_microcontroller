@@ -87,7 +87,7 @@ bool Semg::impedanceTooLow() {
     return (Semg::output > SEMG_LOW_IMPEDANCE_THRESHOLD) ? true : false;
 }
 
-void Semg::samplingCallback(void * obj) {
+void Semg::samplingCallback(TimerHandle_t pxTimer) {
 	if (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {
         Semg::readSensor();
 		Semg::raw_value[Semg::sample_amount] = Semg::voltage;
@@ -103,18 +103,23 @@ void Semg::filterSamplesArray() {
 
 void Semg::startSamplingTimer() {
 	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
+    if (Semg::samplingTimer != NULL) {
+        samplingTimer = xTimerCreate(
+            "sEMG timer",           // Nome do temporizador (para fins de depuração)
+            pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
+            pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
+            (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+            Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
+        );
+    } else {
+    	ESP_LOGW(TAG_SEMG, "Could not start sampling timer: timer already running!");
 
-	samplingTimer = xTimerCreate(
-		"sEMG timer",           // Nome do temporizador (para fins de depuração)
-		pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
-		pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
-		(void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
-		Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
-    );
+    }
 
-    // Verificação se o temporizador foi criado com sucesso
     if (samplingTimer != NULL) {
-        xTimerStart(samplingTimer, 0);
+        if (xTimerStart(samplingTimer, 0) != pdPASS) {
+		    ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+        }
 		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
     } else {
 		//ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
@@ -122,13 +127,17 @@ void Semg::startSamplingTimer() {
 }
 
 void Semg::stopSamplingTimer() {
-	xTimerDelete(Semg::samplingTimer, 0);
+    if (Semg::samplingTimer != NULL) {
+	    xTimerDelete(Semg::samplingTimer, 0);
+        Semg::samplingTimer = NULL;
+    }
 }
 
 float Semg::getFilteredSample() {
 
 	Semg::startSamplingTimer();
 	while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {}
+    Semg::stopSamplingTimer() {
 	
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
 		filtered_value[i] = raw_value[i];

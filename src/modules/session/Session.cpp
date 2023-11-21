@@ -29,7 +29,7 @@ void Session::init() {
 void Session::start() {
     resetSessionStatus();
  	Session::stop();
-	EmergencyButton::init();
+	//EmergencyButton::init();
 	
 	ESP_LOGI(TAG_SESSION, "Creating session task...");
 	if(xTaskCreatePinnedToCore(
@@ -43,8 +43,25 @@ void Session::start() {
 		&Session::task_handle,
 		0
 	)!= pdPASS){
-		Serial.println("nao criou a thread");
+		Serial.println("nao criou a session thread");
 	}
+
+	ESP_LOGI(TAG_SESSION, "Creating Semg task...");
+	if(xTaskCreatePinnedToCore(
+		Semg::sensorTask,
+		"Session task",
+		4048//512 
+			+ sizeof(float) * SEMG_SAMPLES_PER_VALUE 
+			+ sizeof(float) * SEMG_DEFAULT_READINGS_AMOUNT,
+		NULL,
+		1,//SESSION_TASK_PRIORITY,
+		&Semg::task_handle,
+		0
+	)!= pdPASS){
+		ESP_LOGE(TAG_SESSION, "nao criou a Semg thread");
+
+	}
+	vTaskSuspend(Semg::task_handle);
 
 	Serial.println("testeusifhsnoiijhaifvhonifvh");
 }
@@ -192,8 +209,6 @@ void Session::loop(void * parameters) {
 void Session::detectionAndStimulation() {
 	
 	Semg::acquireAverage(2);
-	delay(300);
-	/*
 	bool i = false;
 	if (Semg::isTrigger()) {
 		if (!i){
@@ -217,7 +232,7 @@ void Session::detectionAndStimulation() {
 			*/
 			//delayBetweenStimuli();
 		//}
-	//}
+	}
 }
 
 void Session::resetSessionStatus(bool session_starting) {

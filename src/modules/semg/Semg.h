@@ -21,7 +21,7 @@ class Semg
 {
 private:
     static float filtered_value[SEMG_SAMPLES_PER_VALUE];
-    static float raw_value[SEMG_SAMPLES_PER_VALUE];
+    volatile static float raw_value[SEMG_SAMPLES_PER_VALUE];
     static float mes[5];
 
     static float output;
@@ -53,11 +53,13 @@ public:
     static SemgParameters parameters;
 	static void sendTriggerMessage();
 	static void testTrigger(int test_duration = SEMG_DEFAULT_TEST_DURATION_SECONDS);
-	static void samplingCallback(void * obj);
+	static void samplingCallback(TimerHandle_t xTimer);
 	static TimerHandle_t samplingTimer;
+	static TaskHandle_t task_handle;
 	static void startSamplingTimer();
 	static void stopSamplingTimer();
 	static void setDifficulty(int difficulty);
+	static void sensorTask(void * obj); 
 };
 
 #endif

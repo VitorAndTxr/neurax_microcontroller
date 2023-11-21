@@ -1,19 +1,20 @@
 #include "Semg.h"
 
 float Semg::filtered_value[SEMG_SAMPLES_PER_VALUE] = {0};
-float Semg::raw_value[SEMG_SAMPLES_PER_VALUE] = {0};
+volatile float Semg::raw_value[SEMG_SAMPLES_PER_VALUE] = {0};
 float Semg::mes[5] = {0};
 float SemgParameters::gain = SEMG_DEFAULT_GAIN;
 float SemgParameters::difficulty = 50;
 //float SemgParameters::difficulty = SEMG_DIFFICULTY_DEFAULT;
 
-float SemgParameters::threshold = 100;
+float SemgParameters::threshold = 30;
 float Semg::mes_a[2] = {0};
 float Semg::mes_b[2] = {0};
 volatile float Semg::voltage = 0.0f;
 float Semg::output = 0.0f;
 volatile int Semg::sample_amount = 0;
 TimerHandle_t Semg::samplingTimer = NULL;
+TaskHandle_t Semg::task_handle = NULL;
 const float Semg::sampling_period_ms = SEMG_SAMPLING_PERIOD;
 
 Led LED_TRIGGER(LED_PIN_TRIGGER);
@@ -87,12 +88,8 @@ bool Semg::impedanceTooLow() {
     return (Semg::output > SEMG_LOW_IMPEDANCE_THRESHOLD) ? true : false;
 }
 
-void Semg::samplingCallback(void * obj) {
-	if (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {
-        Semg::readSensor();
-		Semg::raw_value[Semg::sample_amount] = Semg::voltage;
-		Semg::sample_amount++;
-	}
+void Semg::samplingCallback(TimerHandle_t xTimer) {
+	vTaskResume(Semg::task_handle);
 }
 
 void Semg::filterSamplesArray() {
@@ -103,7 +100,7 @@ void Semg::filterSamplesArray() {
 
 void Semg::startSamplingTimer() {
 	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
-   // if (samplingTimer == NULL) {
+    if (samplingTimer == NULL) {
         samplingTimer = xTimerCreate(
             "sEMG timer",           // Nome do temporizador (para fins de depuração)
             pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
@@ -111,20 +108,39 @@ void Semg::startSamplingTimer() {
             (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
             Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
         );
-   // }
+   }
 
     // Verificação se o temporizador foi criado com sucesso
     if (samplingTimer != NULL) {
-        xTimerStart(samplingTimer, 0);
+       if ( xTimerStart(samplingTimer, 0) != pdPASS) {
+            ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+       }
 		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
     } else {
-		//ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+		ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
     }
+    //ESP_LOGE(TAG_SEMG, "Aquiiiiiiiiiii!");
+}
+
+void Semg::sensorTask(void * obj) {
+	while(true) {
+		if (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {
+			Semg::voltage = Adc::getValue(SEMG_ADC_PIN);
+			//Semg::readSensor();
+			Semg::raw_value[Semg::sample_amount] = Semg::voltage;
+			Semg::sample_amount++;
+		}
+		else{
+			vTaskResume(Session::task_handle);
+		}
+		vTaskSuspend(NULL);
+	}
 }
 
 void Semg::stopSamplingTimer() {
     if (samplingTimer != NULL) {
-	    xTimerDelete(Semg::samplingTimer, 0);
+        xTimerStop(Semg::samplingTimer, 0);
+	    //xTimerDelete(Semg::samplingTimer, 0);
     }
 }
 
@@ -132,11 +148,13 @@ float Semg::getFilteredSample() {
 	Semg::sample_amount = 0;
 
 	Semg::startSamplingTimer();
-	while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {}
+    vTaskSuspend(Session::task_handle);
+	//while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {delayMicroseconds(1);}
     Semg::stopSamplingTimer();
 	
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
 		filtered_value[i] = raw_value[i];
+        //Serial.println(filtered_value[i]);
 	}
 
 	
@@ -155,7 +173,7 @@ float Semg::getFilteredSample() {
         average_every_n_samples /= SEMG_SAMPLES_PER_AVERAGE;
         sum_of_averages += average_every_n_samples;
     }
-
+    Serial.println(sum_of_averages);
     return (Semg::parameters.gain * sum_of_averages) / 10.0f;
 }
 
@@ -169,13 +187,14 @@ float Semg::readSensor() {
 float Semg::acquireAverage(int readings_amount) {
 	Semg::output = 0;
 	Semg::sample_amount = 0;
-    /*
+    
     for (int i = 0; i < readings_amount; i++) {
         Semg::output += Semg::getFilteredSample();
     }
-    */
+    
     Semg::output /= (float)readings_amount;
-    Serial.println(Semg::output);
+    //Serial.print("output>");
+    //Serial.println(Semg::output);
     
     return Semg::output;
 }

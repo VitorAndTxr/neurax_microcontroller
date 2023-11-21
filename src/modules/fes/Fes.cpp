@@ -73,13 +73,13 @@ void Fes::fesLoop() {
     while (!Fes::emergency_stop && millis() - startTime < 2000 ) {//stimulating
         //Serial.println("estimulando 3 ---------");
         positiveHBridge();
-        delayMicroseconds(600);
+        delayMicroseconds(400);
 
         negativeHBridge();
-        delayMicroseconds(600);
+        delayMicroseconds(400);
 
         Fes::hBridgeReset();
-        delay(100);
+        delay(16);
     }
 	ESP_LOGI(TAG_FES, "Stoped stimulation");
 	LED_FES.set(false);

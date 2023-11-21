@@ -163,6 +163,7 @@ void Session::loop(void * parameters) {
 	while (Session::status.ongoing) {
 		if (!Session::status.paused) {
 			Session::detectionAndStimulation();
+			ESP_LOGD(TAG_SESSION, "Passando loop principal");
 		}
 		/*
 		Serial.println(Session::status.ongoing);
@@ -191,9 +192,8 @@ void Session::loop(void * parameters) {
 
 void Session::detectionAndStimulation() {
 	
-	Semg::acquireAverage(2);
-	delay(300);
-	/*
+	Semg::acquireAverage();
+
 	bool i = false;
 	if (Semg::isTrigger()) {
 		if (!i){
@@ -217,7 +217,7 @@ void Session::detectionAndStimulation() {
 			*/
 			//delayBetweenStimuli();
 		//}
-	//}
+	}
 }
 
 void Session::resetSessionStatus(bool session_starting) {

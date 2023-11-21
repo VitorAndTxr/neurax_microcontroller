@@ -14,19 +14,22 @@ static const char* TAG_MAIN = "MAIN";
 Led LED_POWER(LED_PIN_POWER);
 
 void setup() {
+
+	disableCore0WDT();
+  	disableCore1WDT();
+
 	LED_POWER.set(true);
 	Serial.begin(115200);
 	
 	esp_log_level_set("*", ESP_LOG_NONE);
-	esp_log_system_timestamp();
 	ESP_LOGI(TAG_MAIN, "Iniciando firmware NeuroEstimulator...");
 	
-	///Gyroscope::init();
-	//Adc::init();
+	Gyroscope::init();
+	Adc::init();
 	
-	//Fes::init();
-	//Semg::init();
-	//Potentiometer::init();
+	Fes::init();
+	Semg::init();
+	Potentiometer::init();
 	Session::init();
 	Session::start();
 	
@@ -162,7 +165,16 @@ void testesessao(){
 	Session::detectionAndStimulation();
 	delay(300);
 }
+
+int loop_counter = 0;
+
 void loop() {
+	vTaskDelete(NULL);
+	// loop_counter++;
+	// if(loop_counter % 100000) {
+	// 	ESP_LOGI(TAG_MAIN, "Task loop");
+	// 	loop_counter = 0;
+	// }
 	//Adc::getValue(1);
 	//testRotinaGiroscopio();
 	//testeMedidasSEMG();

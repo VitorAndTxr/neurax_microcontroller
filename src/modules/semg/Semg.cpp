@@ -13,7 +13,8 @@ float Semg::mes_b[2] = {0};
 volatile float Semg::voltage = 0.0f;
 float Semg::output = 0.0f;
 volatile int Semg::sample_amount = 0;
-TimerHandle_t Semg::samplingTimer = NULL;
+//TimerHandle_t Semg::samplingTimer = NULL;
+hw_timer_t *timer = NULL;
 const float Semg::sampling_period_ms = SEMG_SAMPLING_PERIOD;
 
 Led LED_TRIGGER(LED_PIN_TRIGGER);
@@ -87,7 +88,7 @@ bool Semg::impedanceTooLow() {
     return (Semg::output > SEMG_LOW_IMPEDANCE_THRESHOLD) ? true : false;
 }
 
-void Semg::samplingCallback(void * obj) {
+void IRAM_ATTR Semg::samplingCallback() {
 	if (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {
         Semg::readSensor();
 		Semg::raw_value[Semg::sample_amount] = Semg::voltage;
@@ -101,40 +102,64 @@ void Semg::filterSamplesArray() {
     }
 }
 
+int id_sampling_timer = 3;
+
 void Semg::startSamplingTimer() {
-	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
-   // if (samplingTimer == NULL) {
-        samplingTimer = xTimerCreate(
-            "sEMG timer",           // Nome do temporizador (para fins de depuração)
-            pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
-            pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
-            (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
-            Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
-        );
-   // }
+    if(timer == NULL){
+	    ESP_LOGI(TAG_SEMG, "Starting sampling timer");
+
+        timer = timerBegin(0, 80, true); // Timer 0, prescaler 80, counting up
+        timerAttachInterrupt(timer, &(Semg::samplingCallback), false); // Attach the callback function
+        timerAlarmWrite(timer, (1163), true); // Set timer period in microseconds (1 second in this case)
+    }
+     // Enable the timer
+
+    // if (samplingTimer == NULL) {
+    //      samplingTimer = xTimerCreate(
+    //         "sEMG timer",           // Nome do temporizador (para fins de depuração)
+    //         pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
+    //         pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
+    //         (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+    //         Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
+    //     ); 
+    // }
 
     // Verificação se o temporizador foi criado com sucesso
-    if (samplingTimer != NULL) {
-        xTimerStart(samplingTimer, 0);
-		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
-    } else {
-		//ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+    ESP_LOGI(TAG_SEMG, "Starting sampling timer");
+
+    if (timer != NULL) {
+        //xTimerStart(samplingTimer, 0);
+        timerWrite(timer, 0);
+		ESP_LOGI(TAG_SEMG, "WriteTimer");
+
+        timerAlarmEnable(timer);
+		ESP_LOGI(TAG_SEMG, "Sampling timer started");
     }
+    // } else {
+	// 	//ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+    // }
 }
 
 void Semg::stopSamplingTimer() {
-    if (samplingTimer != NULL) {
-	    xTimerDelete(Semg::samplingTimer, 0);
+    if (timer != NULL) {
+        timerAlarmDisable(timer);
+	    //xTimerDelete(Semg::samplingTimer, 0);
+        // xTimerStop(Semg::samplingTimer, 0);
+        // xTimerReset(Semg::samplingTimer, 0);
+        //samplingTimer = NULL;
+        //Serial.println("timer parado");
     }
+
 }
 
 float Semg::getFilteredSample() {
 	Semg::sample_amount = 0;
 
 	Semg::startSamplingTimer();
-	while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {}
+	while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {
+    vTaskDelay(pdMS_TO_TICKS(1));}
     Semg::stopSamplingTimer();
-	
+	//Serial.println("timer parado");
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
 		filtered_value[i] = raw_value[i];
 	}
@@ -169,13 +194,14 @@ float Semg::readSensor() {
 float Semg::acquireAverage(int readings_amount) {
 	Semg::output = 0;
 	Semg::sample_amount = 0;
-    /*
+    
     for (int i = 0; i < readings_amount; i++) {
         Semg::output += Semg::getFilteredSample();
     }
-    */
+    
     Semg::output /= (float)readings_amount;
-    Serial.println(Semg::output);
+    //Serial.print("leitura");
+    //Serial.println(Semg::output);
     
     return Semg::output;
 }

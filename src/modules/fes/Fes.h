@@ -21,7 +21,7 @@ private:
     static Potentiometer potentiometer;
     static TaskHandle_t fes_loop_handle;
     static volatile bool stimulating;
-    static TimerHandle_t fesTimer;
+    //static TimerHandle_t fesTimer;
 
 public:
     Fes() = delete;

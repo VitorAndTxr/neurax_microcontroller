@@ -6,7 +6,7 @@ int FesParameters::pulse_width_ms = DEFAULT_PULSE_WIDTH;
 float FesParameters::frequency = DEFAULT_FREQUENCY;
 float FesParameters::amplitude = DEFAULT_AMPLITUDE;
 bool Fes::emergency_stop = false;
-TimerHandle_t Fes::fesTimer = NULL;
+//TimerHandle_t Fes::fesTimer = NULL;
 
 TaskHandle_t Fes::fes_loop_handle = NULL;
 volatile bool Fes::stimulating = false;
@@ -88,21 +88,21 @@ void Fes::fesLoop() {
 
 void Fes::begin() {
 	ESP_LOGI(TAG_FES, "Creating timer...");
-    fesTimer = xTimerCreate(
+    /* fesTimer = xTimerCreate(
         "FES timer",           // Nome do temporizador (para fins de depuração)
         pdMS_TO_TICKS(5000),  // Período em milissegundos
         pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
         (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
         Fes::stopFes        // Função a ser chamada quando o temporizador expirar
-    );
+    ); */
     // Verificação se o temporizador foi criado com sucesso
-    if (fesTimer != NULL) {
+    /* if (fesTimer != NULL) {
 		ESP_LOGI(TAG_FES, "Starting timer");
         xTimerStart(fesTimer, 0);
         Fes::fesLoop();
     } else {
 		ESP_LOGE(TAG_FES, "Error creating timer!");
-    }
+    } */
 }
 
 void Fes::stopFes(void * parameters) {

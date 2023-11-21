@@ -37,6 +37,7 @@ private:
 	static volatile int sample_amount;
 	static void filterSamplesArray();
 	static const float sampling_period_ms;
+    //static hw_timer_t *timer;
 
 public:
     Semg() = delete;
@@ -53,7 +54,7 @@ public:
     static SemgParameters parameters;
 	static void sendTriggerMessage();
 	static void testTrigger(int test_duration = SEMG_DEFAULT_TEST_DURATION_SECONDS);
-	static void samplingCallback(void * obj);
+	static void IRAM_ATTR samplingCallback();
 	static TimerHandle_t samplingTimer;
 	static void startSamplingTimer();
 	static void stopSamplingTimer();

@@ -10,8 +10,8 @@ static const char* TAG_FES = "FES";
 
 
 struct FesParameters {
-    static int fes_duration_ms;
-    static int pulse_width_ms;
+    static int fes_duration_s;
+    static int pulse_width_us;
     static float frequency;
     static float amplitude;
 };
@@ -46,7 +46,7 @@ public:
     static void fesLoopTaskWrapper(void *obj);
     static bool isOn();
     static void stopFes(void * parameters);
-    //static void stopFes();
+    static void stopFes();
     static FesParameters parameters;
 	static bool emergency_stop;
 };

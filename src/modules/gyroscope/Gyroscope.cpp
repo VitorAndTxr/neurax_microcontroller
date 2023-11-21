@@ -1,7 +1,7 @@
 #include "Gyroscope.h"
 
 const int Gyroscope::gyroscope_i2c_address = ADC_I2C_ADDR; // already set in lib
-float Gyroscope::last_value = 0.0f;
+volatile float Gyroscope::last_value = 0.0f;
 
 bool Gyroscope::error = false;
 Adafruit_MPU6050 Gyroscope::mpu;
@@ -106,9 +106,10 @@ float Gyroscope::gyroscopeRoutine(){
         //delay(100); 
     }
 	ESP_LOGI(TAG_GYRO, "Finished measurement.");
-	ESP_LOGI(TAG_GYRO, "Exiting gyroscope routine.");
 	
-	last_value = movement_result;
+	
+	Gyroscope::last_value = movement_result;
+    ESP_LOGI(TAG_GYRO, "Exiting gyroscope routine. %f , %f", movement_result, Gyroscope::last_value);
     return movement_result;
 
 #else
@@ -137,7 +138,7 @@ angle Gyroscope::getLastValue(){
 
 void Gyroscope::sendLastValue(){
 	ESP_LOGI(TAG_GYRO, "Building measurement message...");
-    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(3));
+    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(4));
 
     (*message_document)[MESSAGE_KEYS::CODE] = GYROSCOPE_MESSAGE;
     (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
@@ -145,8 +146,7 @@ void Gyroscope::sendLastValue(){
     JsonObject body = 
       (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
 
-    body[MESSAGE_KEYS::ANGLE] = 
-      last_value;
+    body[MESSAGE_KEYS::ANGLE] = Gyroscope::last_value;
 	
 	ESP_LOGI(TAG_GYRO, "Sending measurement message...");
     MessageHandler::sendMessage(message_document);

@@ -177,10 +177,6 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
 		//String serialized_message;
 		//serializeJson(statusObj, serialized_message);
 
-		//Gyroscope::sendLastValue();
-		//Semg::sendTriggerMessage();
-		//Session::sendSessionStatus();
-
 		float amplitude = statusObj[MESSAGE_KEYS::parameters::AMPLITUDE];
 		float frequency = statusObj[MESSAGE_KEYS::parameters::FREQUENCY];
 		float pulse_width = statusObj[MESSAGE_KEYS::parameters::PULSE_WIDTH];
@@ -189,8 +185,8 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
 
 		Fes::parameters.amplitude = amplitude;
 		Fes::parameters.frequency = frequency;
-		Fes::parameters.pulse_width_ms = pulse_width;
-		Fes::parameters.fes_duration_ms = fes_duration;
+		Fes::parameters.pulse_width_us = pulse_width;
+		Fes::parameters.fes_duration_s = fes_duration;
 
 		Semg::setDifficulty(difficulty);
 		

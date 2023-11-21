@@ -26,11 +26,7 @@ void Session::init() {
 	ESP_LOGI(TAG_SESSION, "Setup done");
 }
 
-void Session::start() {
-    resetSessionStatus();
- 	Session::stop();
-	//EmergencyButton::init();
-	
+void createSessionTask() {
 	ESP_LOGI(TAG_SESSION, "Creating session task...");
 	if(xTaskCreatePinnedToCore(
 		Session::loop,
@@ -43,27 +39,34 @@ void Session::start() {
 		&Session::task_handle,
 		0
 	)!= pdPASS){
-		Serial.println("nao criou a session thread");
+		ESP_LOGE(TAG_SESSION, "Fail to create session thread");
 	}
+}
 
+void createSensorTask() {
 	ESP_LOGI(TAG_SESSION, "Creating Semg task...");
 	if(xTaskCreatePinnedToCore(
 		Semg::sensorTask,
-		"Session task",
+		"Sensor task",
 		4048//512 
 			+ sizeof(float) * SEMG_SAMPLES_PER_VALUE 
 			+ sizeof(float) * SEMG_DEFAULT_READINGS_AMOUNT,
 		NULL,
-		1,//SESSION_TASK_PRIORITY,
+		1,//SENSOR_TASK_PRIORITY,
 		&Semg::task_handle,
 		0
 	)!= pdPASS){
-		ESP_LOGE(TAG_SESSION, "nao criou a Semg thread");
-
+		ESP_LOGE(TAG_SESSION, "Fail to create sampling thread");
 	}
 	vTaskSuspend(Semg::task_handle);
+}
 
-	Serial.println("testeusifhsnoiijhaifvhonifvh");
+void Session::start() {
+    resetSessionStatus();
+	EmergencyButton::init();
+	createSensorTask();
+	createSessionTask();
+	Session::pause();
 }
 
 void Session::stop() {
@@ -81,7 +84,7 @@ void Session::pause() {
     Session::status.paused = true;
 	suspendSessionTask();
 	if (Fes::isOn) {
-		//Fes::stopFes();
+		Fes::stopFes();
 		delay(1);
 		Fes::hBridgeReset();
 	}
@@ -156,11 +159,11 @@ void Session::sendSessionStatus(){
 	status_message_parameters[MESSAGE_KEYS::parameters::FREQUENCY] =
 		Fes::parameters.frequency;
 	status_message_parameters[MESSAGE_KEYS::parameters::PULSE_WIDTH] =
-		Fes::parameters.pulse_width_ms;
+		Fes::parameters.pulse_width_us;
 	status_message_parameters[MESSAGE_KEYS::parameters::DIFFICULTY] =
 		Semg::parameters.difficulty;
 	status_message_parameters[MESSAGE_KEYS::parameters::STIMULI_DURATION] =
-		Fes::parameters.fes_duration_ms;
+		Fes::parameters.fes_duration_s;
 
 	ESP_LOGD(TAG_SESSION, "Sending session status message...");
 	MessageHandler::sendMessage(message_document);
@@ -181,27 +184,8 @@ void Session::loop(void * parameters) {
 		if (!Session::status.paused) {
 			Session::detectionAndStimulation();
 		}
-		/*
-		Serial.println(Session::status.ongoing);
-		UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-		ESP_LOGI("teste", "Stack High Water Mark: %u", stackHighWaterMark);
-		int teste [50] = {0};
-		for (int i = 0; i < 50; i++)
-		{
-			teste[i] = i;
-		}
-		
-		delay(300);
-		*/
 	}
 	Serial.println("fechando a thread");
-	/*while(true){
-		UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
-		ESP_LOGI("teste", "Stack High Water Mark: %u", stackHighWaterMark);
-
-		delay(300);
-	}*/
-	
 	vTaskDelete(NULL);
 }
 
@@ -215,23 +199,26 @@ void Session::detectionAndStimulation() {
 			i=true;
 			Serial.println("estimulando");
 		}	
-		Fes::fesLoop();
 		/*if (Semg::impedanceTooLow()) {
 			Session::pause();
 		}*/
-		//else {
-			//Semg::sendTriggerMessage();
-			//Fes::begin();
-			/*
+		if (false) {
+
+		}
+		else {
+			//Semg::sendTriggerMessage(); ja esta no istrigger 
+			Fes::fesLoop();
+			
 			if(!Fes::emergency_stop) {
 				Session::status.complete_stimuli_amount++;
-				Session::sendSessionStatus();
+				//Session::sendSessionStatus();
 			}
 
 			Fes::emergency_stop = false;
-			*/
+			
+			Session::pause();
 			//delayBetweenStimuli();
-		//}
+		}
 	}
 }
 

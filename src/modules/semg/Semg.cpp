@@ -69,6 +69,7 @@ bool Semg::isTrigger() {
 
 	if (trigger) {
 		ESP_LOGI(TAG_SEMG, "==== Trigger detected ====");
+		Semg::sendTriggerMessage();
 
         LED_TRIGGER.set(true);
 		//LED_TRIGGER.turnOnFor(2000);
@@ -77,7 +78,7 @@ bool Semg::isTrigger() {
 }
 
 void Semg::updateTriggerThreshold() {
-    Semg::parameters.threshold = (1 + (Semg::parameters.difficulty / 100)); //* Semg::mes[0]; 
+    Semg::parameters.threshold = (15*(Semg::parameters.difficulty)); //* Semg::mes[0]; 
     bool is_valid_low_threshold = Semg::parameters.threshold > SEMG_TRIGGER_THRESHOLD_MINIMUM;
     Semg::parameters.threshold = is_valid_low_threshold ? Semg::parameters.threshold : SEMG_TRIGGER_THRESHOLD_MINIMUM;
 
@@ -89,7 +90,8 @@ bool Semg::impedanceTooLow() {
 }
 
 void Semg::samplingCallback(TimerHandle_t xTimer) {
-	vTaskResume(Semg::task_handle);
+	vTaskSuspend(Session::task_handle);
+    vTaskResume(Semg::task_handle);
 }
 
 void Semg::filterSamplesArray() {
@@ -113,11 +115,11 @@ void Semg::startSamplingTimer() {
     // Verificação se o temporizador foi criado com sucesso
     if (samplingTimer != NULL) {
        if ( xTimerStart(samplingTimer, 0) != pdPASS) {
-            ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+            ESP_LOGE(TAG_SEMG, "Restarting sEmg timer!");
        }
 		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
     } else {
-		ESP_LOGE(TAG_SEMG, "Error creating FES timer!");
+		ESP_LOGE(TAG_SEMG, "Error creating sEmg timer!");
     }
     //ESP_LOGE(TAG_SEMG, "Aquiiiiiiiiiii!");
 }
@@ -140,6 +142,7 @@ void Semg::sensorTask(void * obj) {
 void Semg::stopSamplingTimer() {
     if (samplingTimer != NULL) {
         xTimerStop(Semg::samplingTimer, 0);
+        //samplingTimer = NULL;
 	    //xTimerDelete(Semg::samplingTimer, 0);
     }
 }
@@ -148,7 +151,6 @@ float Semg::getFilteredSample() {
 	Semg::sample_amount = 0;
 
 	Semg::startSamplingTimer();
-    vTaskSuspend(Session::task_handle);
 	//while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {delayMicroseconds(1);}
     Semg::stopSamplingTimer();
 	

@@ -13,7 +13,7 @@ static const char* TAG_GYRO = "GYRO";
 class Gyroscope
 {
 private:
-    static float last_value;
+    volatile static float last_value;
 public:
 
     Gyroscope() = delete;

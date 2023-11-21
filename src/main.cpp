@@ -28,24 +28,17 @@ void setup() {
 	esp_log_system_timestamp();
 	ESP_LOGI(TAG_MAIN, "Iniciando firmware NeuroEstimulator...");
 	
-	//Gyroscope::init();
+	Gyroscope::init();
 	Adc::init();
 	
 	Fes::init();
 	Semg::init();
 	Potentiometer::init();
 	Session::init();
-	Session::start();
+	MessageHandler::init();
 	
-	/*//MessageHandler::init();
+	MessageHandler::start();
 	
-	Serial.begin(115200);
-	Gyroscope::calibrateMPU6050;
-	ESP_LOGI(TAG_MAIN, "Setup concluido.");
-	Semg::updateTriggerThreshold();
-
-	//MessageHandler::start();
-	*/
 
 	//Led led_test(LED_PIN_TRIGGER);
 	//led_test.set(true);

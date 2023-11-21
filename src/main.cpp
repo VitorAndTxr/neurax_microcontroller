@@ -21,14 +21,14 @@ void setup() {
 	esp_log_system_timestamp();
 	ESP_LOGI(TAG_MAIN, "Iniciando firmware NeuroEstimulator...");
 	
+	///Gyroscope::init();
+	//Adc::init();
 	
-	
-	Fes::init();
-	Semg::init();
-	Potentiometer::init();
+	//Fes::init();
+	//Semg::init();
+	//Potentiometer::init();
 	Session::init();
-	Gyroscope::init();
-	Adc::init();
+	Session::start();
 	
 	/*//MessageHandler::init();
 	
@@ -49,22 +49,6 @@ float voltage = 2;
 int direcao = 1;
 
 void testeControleTensao(){
-	/*
-	for (int i = 0; i<=20 ; i++ ){
-		Serial.println(Potentiometer::getCorrectedVoltage());
-		Potentiometer::increase(1);
-		delay (2000);
-		Serial.println(Potentiometer::getCorrectedVoltage());
-		
-	}
-	
-	for (int i = 0; i<=20; i++ ){
-		Serial.println(Potentiometer::getCorrectedVoltage());
-		Potentiometer::decrease(1);
-		delay (2000);
-		Serial.println(Potentiometer::getCorrectedVoltage());
-		
-	}*/
 	
 	float result;
 	Serial.println("-----------------------------------inicio---------------------------");	
@@ -76,25 +60,23 @@ void testeControleTensao(){
 	Serial.println(result);
 	if (fabs(voltage-result)>0.4)
 	{
-		Serial.println("resultado");
+		Serial.println("a diferença foi maior do que 0.4V");
 		delay(1000000);
 	}
 	delay(1000);
 	voltage += 0.4 * direcao;
 
     // Verifica se o valor atingiu 3.0 ou 0.0 para inverter a direção
-    if (voltage >= 9.2 || voltage <= 2.0) {
+    if (voltage >= 9.0 || voltage <= 2.0) {
         direcao *= -1; // Inverte a direção
     }
 	
-	//MessageHandler::loop();
-	//BatteryMonitor::loop();
 }
 
 void testeControleTensao2(){
 	
 	float voltage2, result2;
-	voltage2 = 5.0;
+	voltage2 = 7.0;
 	Serial.println("-----------------------------------inicio---------------------------");	
 	Potentiometer::voltageSet(voltage2);
 	result2 = Potentiometer::getCorrectedVoltage();
@@ -103,9 +85,6 @@ void testeControleTensao2(){
 	Serial.println("resultado");
 	Serial.println(result2);
 	delay(3000);
-	
-	//MessageHandler::loop();
-	//BatteryMonitor::loop();
 }
 
 void testSEMG(){
@@ -187,7 +166,10 @@ void loop() {
 	//Adc::getValue(1);
 	//testRotinaGiroscopio();
 	//testeMedidasSEMG();
-	testesessao();
+	//testesessao();
+	//testeControleTensao();
+	
+
 }
 
 

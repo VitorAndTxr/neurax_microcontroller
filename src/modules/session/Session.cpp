@@ -32,17 +32,21 @@ void Session::start() {
 	EmergencyButton::init();
 	
 	ESP_LOGI(TAG_SESSION, "Creating session task...");
-	xTaskCreatePinnedToCore(
+	if(xTaskCreatePinnedToCore(
 		Session::loop,
 		"Session task",
-		512 
+		4048//512 
 			+ sizeof(float) * SEMG_SAMPLES_PER_VALUE 
 			+ sizeof(float) * SEMG_DEFAULT_READINGS_AMOUNT,
 		NULL,
-		SESSION_TASK_PRIORITY,
+		5,//SESSION_TASK_PRIORITY,
 		&Session::task_handle,
-		session_cpu
-	);
+		0
+	)!= pdPASS){
+		Serial.println("nao criou a thread");
+	}
+
+	Serial.println("testeusifhsnoiijhaifvhonifvh");
 }
 
 void Session::stop() {
@@ -160,25 +164,49 @@ void Session::loop(void * parameters) {
 		if (!Session::status.paused) {
 			Session::detectionAndStimulation();
 		}
+		/*
+		Serial.println(Session::status.ongoing);
+		UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+		ESP_LOGI("teste", "Stack High Water Mark: %u", stackHighWaterMark);
+		int teste [50] = {0};
+		for (int i = 0; i < 50; i++)
+		{
+			teste[i] = i;
+		}
+		
+		delay(300);
+		*/
 	}
+	Serial.println("fechando a thread");
+	/*while(true){
+		UBaseType_t stackHighWaterMark = uxTaskGetStackHighWaterMark(NULL);
+		ESP_LOGI("teste", "Stack High Water Mark: %u", stackHighWaterMark);
+
+		delay(300);
+	}*/
+	
+	vTaskDelete(NULL);
 }
 
+
 void Session::detectionAndStimulation() {
-	Semg::acquireAverage();
-
-
+	
+	Semg::acquireAverage(2);
+	delay(300);
+	/*
 	bool i = false;
 	if (Semg::isTrigger()) {
 		if (!i){
 			i=true;
 			Serial.println("estimulando");
 		}	
+		Fes::fesLoop();
 		/*if (Semg::impedanceTooLow()) {
 			Session::pause();
 		}*/
 		//else {
 			//Semg::sendTriggerMessage();
-			Fes::begin();
+			//Fes::begin();
 			/*
 			if(!Fes::emergency_stop) {
 				Session::status.complete_stimuli_amount++;
@@ -187,9 +215,9 @@ void Session::detectionAndStimulation() {
 
 			Fes::emergency_stop = false;
 			*/
-			delayBetweenStimuli();
+			//delayBetweenStimuli();
 		//}
-	}
+	//}
 }
 
 void Session::resetSessionStatus(bool session_starting) {

@@ -69,7 +69,8 @@ void Fes::fesLoop() {
 	LED_FES.set(true);
     Fes::stimulating = true;
 	// TODO emergency stop
-    while (!Fes::emergency_stop && stimulating) {
+    unsigned long startTime = millis();
+    while (!Fes::emergency_stop && millis() - startTime < 2000 ) {//stimulating
         //Serial.println("estimulando 3 ---------");
         positiveHBridge();
         delayMicroseconds(600);

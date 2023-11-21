@@ -63,14 +63,14 @@ inline bool Semg::outputIsInInterval(float lower_limit, float higher_limit){
 }
 
 bool Semg::isTrigger() {
-	bool trigger = (outputIsInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM)
-        && !Fes::isOn());
+	bool trigger = (outputIsInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM));
+        //&& !Fes::isOn());
 
 	if (trigger) {
 		ESP_LOGI(TAG_SEMG, "==== Trigger detected ====");
 
         LED_TRIGGER.set(true);
-		LED_TRIGGER.turnOnFor(2000);
+		//LED_TRIGGER.turnOnFor(2000);
 	}
     return trigger;
 }
@@ -103,14 +103,15 @@ void Semg::filterSamplesArray() {
 
 void Semg::startSamplingTimer() {
 	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
-
-	samplingTimer = xTimerCreate(
-		"sEMG timer",           // Nome do temporizador (para fins de depuração)
-		pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
-		pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
-		(void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
-		Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
-    );
+   // if (samplingTimer == NULL) {
+        samplingTimer = xTimerCreate(
+            "sEMG timer",           // Nome do temporizador (para fins de depuração)
+            pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
+            pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
+            (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+            Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
+        );
+   // }
 
     // Verificação se o temporizador foi criado com sucesso
     if (samplingTimer != NULL) {
@@ -122,17 +123,22 @@ void Semg::startSamplingTimer() {
 }
 
 void Semg::stopSamplingTimer() {
-	xTimerDelete(Semg::samplingTimer, 0);
+    if (samplingTimer != NULL) {
+	    xTimerDelete(Semg::samplingTimer, 0);
+    }
 }
 
 float Semg::getFilteredSample() {
+	Semg::sample_amount = 0;
 
 	Semg::startSamplingTimer();
 	while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {}
+    Semg::stopSamplingTimer();
 	
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
 		filtered_value[i] = raw_value[i];
 	}
+
 	
 	Semg::sample_amount = 0;
 
@@ -162,10 +168,14 @@ float Semg::readSensor() {
 
 float Semg::acquireAverage(int readings_amount) {
 	Semg::output = 0;
+	Semg::sample_amount = 0;
+    /*
     for (int i = 0; i < readings_amount; i++) {
         Semg::output += Semg::getFilteredSample();
     }
-    Semg::output /= readings_amount;
+    */
+    Semg::output /= (float)readings_amount;
+    Serial.println(Semg::output);
     
     return Semg::output;
 }

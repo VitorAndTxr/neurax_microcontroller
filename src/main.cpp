@@ -18,11 +18,13 @@ Led LED_POWER(LED_PIN_POWER);
 
 void setup() {
 
+	Serial.begin(115200);
+
 	disableCore0WDT();
 	disableCore1WDT();
 	
 	LED_POWER.set(true);
-	Serial.begin(115200);
+	
 	
 	esp_log_level_set("*", ESP_LOG_NONE);
 	esp_log_system_timestamp();

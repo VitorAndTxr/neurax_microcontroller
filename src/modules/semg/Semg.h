@@ -34,11 +34,11 @@ private:
     static float readSensor();
     static bool outputIsInInterval(float lower_limit, float higher_limit);
     static float getFilteredSample();
-	static volatile int sample_amount;
 	static void filterSamplesArray();
 	static const float sampling_period_ms;
 
 public:
+	static volatile int sample_amount;
     Semg() = delete;
     ~Semg() = delete;
     static void init();

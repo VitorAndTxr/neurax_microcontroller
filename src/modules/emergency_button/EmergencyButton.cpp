@@ -16,6 +16,6 @@ void EmergencyButton::stop() {
 
 void EmergencyButton::emergencyStop() {
 	Fes::emergency_stop = true;
-	Session::pause();
+	Session::pauseFromMessageHandler();
 	ESP_LOGW(TAG_EMR, "===== Emergency stop =====");
 }

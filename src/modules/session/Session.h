@@ -47,7 +47,8 @@ public:
     static void init();
     static void start();
     static void stop();
-    static void pause();
+    static void pauseFromSession();
+    static void pauseFromMessageHandler();
     static void resume();
     static void singleStimulus();
 	static void sendSessionStatus();

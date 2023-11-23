@@ -41,10 +41,14 @@ void MessageHandler::start() {
 void MessageHandler::loop(void * parameters)
 {
 	ESP_LOGI(TAG_MSG, "Starting Message Handler loop");
-
+   
+    
     while (true) {
+        //ESP_LOGI(TAG_MSG, "no loop");
+   
         if (Bluetooth::isConnected()) {
             MessageHandler::handleIncomingMessages();
+    
         }
         else {
             Bluetooth::waitForConnection();
@@ -53,6 +57,8 @@ void MessageHandler::loop(void * parameters)
 }
 
 void MessageHandler::sendMessage(DynamicJsonDocument* message) {
+    
+    
     String serialized_message;
     serializeJson(*message, serialized_message);
 
@@ -64,8 +70,14 @@ void MessageHandler::sendMessage(DynamicJsonDocument* message) {
 	    Bluetooth::sendData(serialized_message);
 		ESP_LOGI(TAG_MSG, "Message sent!");
     }
-    delay(200);
+    //delay(200);
+    vTaskDelay(pdMS_TO_TICKS(200));
     //(*message).clear();
+
+    if (message != NULL){
+        delete message;
+    }
+    ESP_LOGI(TAG_MSG, "getting out message send");
 }
 
 void MessageHandler::handleIncomingMessages() {
@@ -109,7 +121,7 @@ void MessageHandler::interpretMessage(String data)
         case SESSION_COMMANDS::PAUSE:
 			ESP_LOGI(TAG_MSG, "SESSION_COMMANDS::PAUSE");
 		
-            Session::pause();
+            Session::pauseFromMessageHandler();
             break;
 
         case SESSION_COMMANDS::RESUME:

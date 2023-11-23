@@ -1,5 +1,6 @@
 #include "Session.h"
 
+
 short SessionStatus::complete_stimuli_amount = 0;
 short SessionStatus::interrupted_stimuli_amount = 0;
 uint32_t SessionStatus::time_of_last_trigger = 0;
@@ -35,7 +36,7 @@ void createSessionTask() {
 			+ sizeof(float) * SEMG_SAMPLES_PER_VALUE 
 			+ sizeof(float) * SEMG_DEFAULT_READINGS_AMOUNT,
 		NULL,
-		5,//SESSION_TASK_PRIORITY,
+		20,//SESSION_TASK_PRIORITY,
 		&Session::task_handle,
 		0
 	)!= pdPASS){
@@ -52,7 +53,7 @@ void createSensorTask() {
 			+ sizeof(float) * SEMG_SAMPLES_PER_VALUE 
 			+ sizeof(float) * SEMG_DEFAULT_READINGS_AMOUNT,
 		NULL,
-		1,//SENSOR_TASK_PRIORITY,
+		10,//SENSOR_TASK_PRIORITY,
 		&Semg::task_handle,
 		0
 	)!= pdPASS){
@@ -66,7 +67,8 @@ void Session::start() {
 	EmergencyButton::init();
 	createSensorTask();
 	createSessionTask();
-	Session::pause();
+	//Session::pauseFromMessageHandler();
+	ESP_LOGI(TAG_SESSION, "Session Start");
 }
 
 void Session::stop() {
@@ -79,35 +81,57 @@ void Session::stop() {
 	ESP_LOGI(TAG_SESSION, "Stopped session.");
 }
 
-void Session::pause() {
+void Session::pauseFromSession() {
 	ESP_LOGI(TAG_SESSION, "pausando");
     Session::status.paused = true;
-	suspendSessionTask();
 	if (Fes::isOn) {
 		Fes::stopFes();
-		delay(1);
-		Fes::hBridgeReset();
+		Session::status.interrupted_stimuli_amount++;
+		delay(1);	
 	}
-	
-	Session::status.interrupted_stimuli_amount++;
-	Session::sendSessionStatus();
+	Fes::hBridgeReset();
+	vTaskSuspend(NULL);
+	//Session::sendSessionStatus();
 	// TODO
 	// send pause message to app (maybe add reason?)
-	Session::sendSessionPauseMessage();
+	//Session::sendSessionPauseMessage();
+}
+
+void Session::pauseFromMessageHandler() {
+	ESP_LOGI(TAG_SESSION, "p");
+    Session::suspendSessionTask();
+	Session::status.paused = true;
+	if (Fes::isOn) {
+		Fes::stopFes();
+		Session::status.interrupted_stimuli_amount++;
+		delay(1);	
+	}
+	Fes::hBridgeReset();
+	
+	//Session::sendSessionStatus();
+	// TODO
+	// send pause message to app (maybe add reason?)
+	//Session::sendSessionPauseMessage();
 }
 
 void Session::suspendSessionTask() {
 	if (Session::task_handle != NULL) {
-		vTaskSuspend(Session::task_handle);
 		ESP_LOGD(TAG_SESSION, "Session task suspended.");
+		vTaskSuspend(Session::task_handle);	
 	}
 }
 
 void Session::resume() {
     Session::status.paused = false;
 	if (Session::task_handle != NULL) {
-		vTaskResume(Session::task_handle);
+		Semg::sample_amount = 0;
+
+		vTaskResume(Session::task_handle);		
 		ESP_LOGD(TAG_SESSION, "Session task resumed.");
+
+	}
+	else{
+		ESP_LOGD(TAG_SESSION, "Session resume was called but there was no task \" ==null\" ");
 	}
 }
 
@@ -127,6 +151,7 @@ void Session::sendSessionPauseMessage() {
 }
 
 void Session::sendSessionStatus(){
+
 	ESP_LOGD(TAG_SESSION, "Building session status message...");
 	
 	DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(14));
@@ -192,9 +217,12 @@ void Session::loop(void * parameters) {
 
 void Session::detectionAndStimulation() {
 	
-	Semg::acquireAverage(2);
+	Semg::acquireAverage(5);
 	bool i = false;
-	if (Semg::isTrigger()) {
+	bool isTrigger = Semg::isTrigger();
+	ESP_LOGI(TAG_SEMG, "Variavel istrigger = %d ", isTrigger);
+	if (isTrigger) {
+		ESP_LOGI(TAG_SEMG, "==== teste ====");
 		if (!i){
 			i=true;
 			Serial.println("estimulando");
@@ -216,7 +244,8 @@ void Session::detectionAndStimulation() {
 
 			Fes::emergency_stop = false;
 			
-			Session::pause();
+		
+			Session::pauseFromSession();
 			//delayBetweenStimuli();
 		}
 	}

@@ -81,6 +81,7 @@ void Fes::fesLoop() {
         Fes::hBridgeReset();
         delayMicroseconds(remaining_time);
     }
+     Fes::stimulating = false;
 	ESP_LOGI(TAG_FES, "Stoped stimulation");
 	LED_FES.set(false);
 #endif

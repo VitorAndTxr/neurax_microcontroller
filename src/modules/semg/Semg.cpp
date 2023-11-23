@@ -58,19 +58,21 @@ void Semg::decreaseDifficulty(int decrement) {
 inline bool Semg::outputIsInInterval(float lower_limit, float higher_limit){
 	bool in_interval = Semg::output >= Semg::parameters.threshold && Semg::output <= 300.0f;
     
-	//ESP_LOGI(TAG_FES, "Verify Semg %f lower limit: %f, upper limit: %f\nIn interval? %d", Semg::output, lower_limit, 300.0f, static_cast<int>(in_interval));
+	ESP_LOGI(TAG_FES, "Verify Semg %f lower limit: %f, upper limit: %f\nIn interval? %d", Semg::output, lower_limit, 300.0f, static_cast<int>(in_interval));
 
     return in_interval;
 }
 
 bool Semg::isTrigger() {
-	bool trigger = (outputIsInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM));
-        //&& !Fes::isOn());
+	bool trigger = (outputIsInInterval(Semg::parameters.threshold, SEMG_TRIGGER_THRESHOLD_MAXIMUM)
+        && !Fes::isOn());
 
 	if (trigger) {
 		ESP_LOGI(TAG_SEMG, "==== Trigger detected ====");
-		Semg::sendTriggerMessage();
-
+		//vTaskSuspend(MessageHandler::task_handle);
+        Semg::sendTriggerMessage();
+        //Gyroscope::sendLastValue();
+        //vTaskResume(MessageHandler::task_handle);
         LED_TRIGGER.set(true);
 		//LED_TRIGGER.turnOnFor(2000);
 	}
@@ -90,7 +92,7 @@ bool Semg::impedanceTooLow() {
 }
 
 void Semg::samplingCallback(TimerHandle_t xTimer) {
-	vTaskSuspend(Session::task_handle);
+	//vTaskSuspend(Session::task_handle);
     vTaskResume(Semg::task_handle);
 }
 
@@ -151,7 +153,7 @@ float Semg::getFilteredSample() {
 	Semg::sample_amount = 0;
 
 	Semg::startSamplingTimer();
-	//while (Semg::sample_amount < SEMG_SAMPLES_PER_VALUE) {delayMicroseconds(1);}
+	vTaskSuspend(NULL);
     Semg::stopSamplingTimer();
 	
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {

@@ -20,9 +20,9 @@ private:
     static void handleSessionParametersMessage(DynamicJsonDocument &message);
     static int getMessageCode(DynamicJsonDocument &message);
     static String getMessageMethod(DynamicJsonDocument &message);
-    static TaskHandle_t task_handle;
     static void handleIncomingMessages();
 public:
+    static TaskHandle_t task_handle;
     MessageHandler() = delete;
     ~MessageHandler() = delete;
     static void init();

@@ -1,16 +1,17 @@
 #include "Fes.h"
 #include "../debug/Debug.h"
 
-int FesParameters::fes_duration_ms = DEFAULT_STIMULI_DURATION;
-int FesParameters::pulse_width_ms = DEFAULT_PULSE_WIDTH;
+int FesParameters::fes_duration_s = DEFAULT_STIMULI_DURATION;
+int FesParameters::pulse_width_us = DEFAULT_PULSE_WIDTH;
 float FesParameters::frequency = DEFAULT_FREQUENCY;
 float FesParameters::amplitude = DEFAULT_AMPLITUDE;
 bool Fes::emergency_stop = false;
 TimerHandle_t Fes::fesTimer = NULL;
 
-
 TaskHandle_t Fes::fes_loop_handle = NULL;
-bool Fes::stimulating = false;
+volatile bool Fes::stimulating = false;
+
+Led LED_FES(LED_PIN_FES);
 
 void negativeHBridge(){
 #if FES_MODULE_ENABLE
@@ -35,9 +36,11 @@ void Fes::hBridgeReset(){
 
 void Fes::init()
 {
+	ESP_LOGI(TAG_FES, "Setup...");
     Fes::initGpio();
     Fes::setParameters();
     Fes::hBridgeReset();
+	ESP_LOGI(TAG_FES, "Setup done.");
 }
 
 void Fes::initGpio()
@@ -48,83 +51,85 @@ void Fes::initGpio()
 #endif
 }
 
-void Fes::increaseAmplitude(int steps)
-{
+void Fes::increaseAmplitude(int steps) {
     potentiometer.increase();
 }
 
-void Fes::decreaseAmplitude(int steps)
-{
+void Fes::decreaseAmplitude(int steps) {
     potentiometer.decrease();
 }
 
-void Fes::fesLoopTaskWrapper(void *obj) 
-{
-/*     // Cast the void pointer back to the class instance
-    Fes *instance = static_cast<Fes *>(obj);
-
-    // Call the member function using the instance
-    instance->fesLoop(); */
-}
-
-void Fes::fesLoop() 
-{
+void Fes::fesLoop() {
 #if FES_MODULE_ENABLE
-    int single_pulse_duration_ms = Fes::parameters.pulse_width_ms / 2;
-    int remaining_time = (1 / (Fes::parameters.frequency)) - Fes::parameters.pulse_width_ms;
+    int single_pulse_duration_us = Fes::parameters.pulse_width_us;
+    float remaining_time = (1000000 / (Fes::parameters.frequency)) - (Fes::parameters.pulse_width_us*2);
 
+	Potentiometer::voltageSet(Fes::parameters.amplitude);
+	ESP_LOGI(TAG_FES, "Starting stimulation");
+	LED_FES.set(true);
     Fes::stimulating = true;
-    while (!Fes::emergency_stop && stimulating)
-    {
+	// TODO emergency stop
+    unsigned long startTime = millis();
+    while (!Fes::emergency_stop && millis() - startTime < Fes::parameters.fes_duration_s*1000 && stimulating) {
+        //Serial.println("estimulando 3 ---------");
         positiveHBridge();
-        vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
+        delayMicroseconds(single_pulse_duration_us);
 
         negativeHBridge();
-        vTaskDelay(single_pulse_duration_ms / portTICK_PERIOD_MS);
+        delayMicroseconds(single_pulse_duration_us);
 
         Fes::hBridgeReset();
         delayMicroseconds(remaining_time);
-#endif
     }
+     Fes::stimulating = false;
+	ESP_LOGI(TAG_FES, "Stoped stimulation");
+	LED_FES.set(false);
+#endif
 }
 
-void Fes::begin()
-{
-
+void Fes::begin() {
+	ESP_LOGI(TAG_FES, "Creating timer...");
     fesTimer = xTimerCreate(
-        "MyTimer",           // Nome do temporizador (para fins de depuração)
-        pdMS_TO_TICKS(Fes::parameters.fes_duration_ms),  // Período em milissegundos
+        "FES timer",           // Nome do temporizador (para fins de depuração)
+        pdMS_TO_TICKS(5000),  // Período em milissegundos
         pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
         (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
         Fes::stopFes        // Função a ser chamada quando o temporizador expirar
     );
-
     // Verificação se o temporizador foi criado com sucesso
     if (fesTimer != NULL) {
-        // Inicialização do temporizador
+		ESP_LOGI(TAG_FES, "Starting timer");
         xTimerStart(fesTimer, 0);
         Fes::fesLoop();
     } else {
-        printDebug("Erro ao criar o temporizador do FES!");
+		ESP_LOGE(TAG_FES, "Error creating timer!");
     }
 }
 
 void Fes::stopFes(void * parameters) {
     Fes::stimulating = false;
+	ESP_LOGI(TAG_FES, "Timer completed");
+	ESP_LOGI(TAG_FES, "Stopping FES timer...");
+}
+
+void Fes::stopFes() {
+    Fes::stimulating = false;
+	ESP_LOGI(TAG_FES, "Stopping FES...");
 }
 
 void Fes::setParameters(int fes_duration_ms, int pulse_width_ms, double frequency) {
-    Fes::parameters.fes_duration_ms = fes_duration_ms;
-    Fes::parameters.pulse_width_ms = pulse_width_ms;
+	ESP_LOGI(TAG_FES, "Setting parameters");
+    Fes::parameters.fes_duration_s = fes_duration_ms;
+    Fes::parameters.pulse_width_us = pulse_width_ms;
     Fes::parameters.frequency = frequency;
 }
 
 void Fes::setFesDurationMs(int fes_duration_ms) {
-    Fes::parameters.fes_duration_ms = fes_duration_ms;
+    Fes::parameters.fes_duration_s = fes_duration_ms;
 }
 
 void Fes::setPulseWidthMs(int pulse_width_ms) {
-    Fes::parameters.pulse_width_ms = pulse_width_ms;
+    Fes::parameters.pulse_width_us = pulse_width_ms;
 }
 
 void Fes::setFrequency(double frequency) {

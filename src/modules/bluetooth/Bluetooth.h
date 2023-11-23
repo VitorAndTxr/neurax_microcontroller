@@ -3,6 +3,9 @@
 
 #include <HardwareSerial.h>
 #include <ArduinoJson.h>
+#include "../led/Led.h"
+
+static const char* TAG_BLU = "BLU";
 
 class Bluetooth
 {
@@ -13,7 +16,7 @@ public:
     ~Bluetooth() = delete;
     static void init();
     static String readData();
-    static void sendData(const String &data);
+    static void sendData(String &data);
     static bool isConnected();
 	static void waitForConnection();
 };

@@ -8,10 +8,12 @@ typedef float angle;
 #include "../message_handler/MessageHandler.h"
 #include "../../globals.h"
 
+static const char* TAG_GYRO = "GYRO";
+
 class Gyroscope
 {
 private:
-    static float last_value;
+    volatile static float last_value;
 public:
 
     Gyroscope() = delete;
@@ -29,6 +31,7 @@ public:
     static float calculatePitch();
     //TODO mutex needed?
     static float gyroscopeRoutine(); 
+	void testGyroscope();
 };
 
 #endif

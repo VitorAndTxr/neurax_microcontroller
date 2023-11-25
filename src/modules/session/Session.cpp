@@ -230,6 +230,9 @@ void Session::detectionAndStimulation() {
 			i=true;
 			Serial.println("estimulando");
 		}	
+
+		
+		//xTimerStart(Semg::ledTriggerTimer, 0);
 		/*if (Semg::impedanceTooLow()) {
 			Session::pause();
 		}*/
@@ -238,6 +241,7 @@ void Session::detectionAndStimulation() {
 		}
 		else {
 			//Semg::sendTriggerMessage(); ja esta no istrigger 
+			//delay(2000);
 			Fes::fesLoop();
 			
 			if(!Fes::emergency_stop) {

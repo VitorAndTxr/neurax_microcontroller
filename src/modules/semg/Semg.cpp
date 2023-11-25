@@ -14,10 +14,12 @@ volatile float Semg::voltage = 0.0f;
 float Semg::output = 0.0f;
 volatile int Semg::sample_amount = 0;
 TimerHandle_t Semg::samplingTimer = NULL;
+TimerHandle_t Semg::ledTriggerTimer = NULL;
 TaskHandle_t Semg::task_handle = NULL;
 const float Semg::sampling_period_ms = SEMG_SAMPLING_PERIOD;
 
 Led LED_TRIGGER(LED_PIN_TRIGGER);
+
 
 void Semg::init() {
 	ESP_LOGI(TAG_SEMG, "Setup...");
@@ -27,6 +29,13 @@ void Semg::init() {
 
     //Semg::disableSensor();
 	LED_TRIGGER.set(false);
+    Semg::createLedTriggerTimer();
+}
+void Semg::startLedTrigger(){
+    //turn on led
+    LED_TRIGGER.set(true);
+    //start o timer
+    xTimerStart(Semg::ledTriggerTimer, 0);
 }
 
 void Semg::setDifficulty(int difficulty) {
@@ -71,9 +80,10 @@ bool Semg::isTrigger() {
 		ESP_LOGI(TAG_SEMG, "==== Trigger detected ====");
 		//vTaskSuspend(MessageHandler::task_handle);
         Semg::sendTriggerMessage();
+        Semg::startLedTrigger();
         //Gyroscope::sendLastValue();
         //vTaskResume(MessageHandler::task_handle);
-        LED_TRIGGER.set(true);
+        //LED_TRIGGER.set(true);
 		//LED_TRIGGER.turnOnFor(2000);
 	}
     return trigger;
@@ -96,12 +106,40 @@ void Semg::samplingCallback(TimerHandle_t xTimer) {
     vTaskResume(Semg::task_handle);
 }
 
+void Semg::ledTriggerCallback(TimerHandle_t xTimer) {
+	//vTaskSuspend(Session::task_handle);
+    LED_TRIGGER.set(0);
+}
+
 void Semg::filterSamplesArray() {
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
         Semg::filtered_value[i] = SemgFilter::filter(Semg::filtered_value[i]);
     }
 }
+void Semg::createLedTriggerTimer(){
+    if (ledTriggerTimer == NULL) {
+        ledTriggerTimer = xTimerCreate(
+            "sEMG timer",           // Nome do temporizador (para fins de depuração)
+            pdMS_TO_TICKS(1000),  // Período em milissegundos
+            pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
+            (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+            Semg::ledTriggerCallback        // Função a ser chamada quando o temporizador expirar
+        );
+   }
 
+    // Verificação se o temporizador foi criado com sucesso
+    if (samplingTimer != NULL) {
+        ESP_LOGE(TAG_SEMG, "creating led trigger timer ");
+        
+    //    if ( xTimerStart(samplingTimer, 0) != pdPASS) {
+    //         ESP_LOGE(TAG_SEMG, "Restarting sEmg timer!");
+    //    }
+		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
+    } else {
+		ESP_LOGE(TAG_SEMG, "Error creating led trigger timer!");
+    }
+
+}
 void Semg::startSamplingTimer() {
 	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
     if (samplingTimer == NULL) {

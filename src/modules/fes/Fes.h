@@ -20,10 +20,10 @@ class Fes
 private:
     static Potentiometer potentiometer;
     static TaskHandle_t fes_loop_handle;
-    static volatile bool stimulating;
     static TimerHandle_t fesTimer;
 
 public:
+    static volatile bool stimulating;
     Fes() = delete;
     ~Fes() = delete;
     static void init();

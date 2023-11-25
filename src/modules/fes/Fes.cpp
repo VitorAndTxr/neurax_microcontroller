@@ -64,13 +64,15 @@ void Fes::fesLoop() {
     int single_pulse_duration_us = Fes::parameters.pulse_width_us;
     float remaining_time = (1000000 / (Fes::parameters.frequency)) - (Fes::parameters.pulse_width_us*2);
 
-	Potentiometer::voltageSet(Fes::parameters.amplitude);
+	//Potentiometer::voltageSet(Fes::parameters.amplitude);
+    float voltage_diference = fabs(Fes::parameters.amplitude - Potentiometer::getCorrectedVoltage());
 	ESP_LOGI(TAG_FES, "Starting stimulation");
 	LED_FES.set(true);
     Fes::stimulating = true;
 	// TODO emergency stop
     unsigned long startTime = millis();
-    while (!Fes::emergency_stop && millis() - startTime < Fes::parameters.fes_duration_s*1000 && stimulating) {
+
+    while (!Fes::emergency_stop && millis() - startTime < Fes::parameters.fes_duration_s*1000 && Fes::stimulating && voltage_diference <=0.5) {
         //Serial.println("estimulando 3 ---------");
         positiveHBridge();
         delayMicroseconds(single_pulse_duration_us);

@@ -14,7 +14,7 @@ public:
 	~EmergencyButton() = delete;
 	static void init();
 	static void stop();
-	static void emergencyStop();
+	static void IRAM_ATTR emergencyStop();
 };
 
 

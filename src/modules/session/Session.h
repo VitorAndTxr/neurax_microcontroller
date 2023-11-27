@@ -30,7 +30,6 @@ struct SessionParameters
 class Session
 {
 private:
-    static SessionStatus status;
     static SessionParameters parameters;
 	TickType_t getTicksDelayBetweenStimuli();
     static void resetSessionStatus(bool session_starting = true);
@@ -39,6 +38,7 @@ private:
 	static void suspendSessionTask();
 	static void sendSessionPauseMessage();
 public:
+    static SessionStatus status;
     Session() = delete;
     ~Session() = delete;
     static TaskHandle_t task_handle;

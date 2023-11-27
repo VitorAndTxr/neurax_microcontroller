@@ -64,13 +64,15 @@ void Fes::fesLoop() {
     int single_pulse_duration_us = Fes::parameters.pulse_width_us;
     float remaining_time = (1000000 / (Fes::parameters.frequency)) - (Fes::parameters.pulse_width_us*2);
 
-	Potentiometer::voltageSet(Fes::parameters.amplitude);
+	//Potentiometer::voltageSet(Fes::parameters.amplitude);
+    float voltage_diference = fabs(Fes::parameters.amplitude - Potentiometer::getCorrectedVoltage());
 	ESP_LOGI(TAG_FES, "Starting stimulation");
 	LED_FES.set(true);
     Fes::stimulating = true;
 	// TODO emergency stop
     unsigned long startTime = millis();
-    while (!Fes::emergency_stop && millis() - startTime < Fes::parameters.fes_duration_s*1000 && stimulating) {
+
+    while (!Fes::emergency_stop && millis() - startTime < Fes::parameters.fes_duration_s*1000 && Fes::stimulating && voltage_diference <=0.5) {
         //Serial.println("estimulando 3 ---------");
         positiveHBridge();
         delayMicroseconds(single_pulse_duration_us);
@@ -87,23 +89,29 @@ void Fes::fesLoop() {
 #endif
 }
 
+
+
 void Fes::begin() {
-	ESP_LOGI(TAG_FES, "Creating timer...");
-    fesTimer = xTimerCreate(
-        "FES timer",           // Nome do temporizador (para fins de depuração)
-        pdMS_TO_TICKS(5000),  // Período em milissegundos
-        pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
-        (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
-        Fes::stopFes        // Função a ser chamada quando o temporizador expirar
-    );
-    // Verificação se o temporizador foi criado com sucesso
-    if (fesTimer != NULL) {
-		ESP_LOGI(TAG_FES, "Starting timer");
-        xTimerStart(fesTimer, 0);
-        Fes::fesLoop();
-    } else {
-		ESP_LOGE(TAG_FES, "Error creating timer!");
-    }
+	
+
+
+    Fes::fesLoop();
+    // ESP_LOGI(TAG_FES, "Creating timer...");
+    // fesTimer = xTimerCreate(
+    //     "FES timer",           // Nome do temporizador (para fins de depuração)
+    //     pdMS_TO_TICKS(5000),  // Período em milissegundos
+    //     pdFALSE,              // Modo autoreload, o temporizador será recarregado automaticamente
+    //     (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+    //     Fes::stopFes        // Função a ser chamada quando o temporizador expirar
+    // );
+    // // Verificação se o temporizador foi criado com sucesso
+    // if (fesTimer != NULL) {
+	// 	ESP_LOGI(TAG_FES, "Starting timer");
+    //     xTimerStart(fesTimer, 0);
+       
+    // } else {
+	// 	ESP_LOGE(TAG_FES, "Error creating timer!");
+    // }
 }
 
 void Fes::stopFes(void * parameters) {

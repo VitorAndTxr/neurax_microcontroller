@@ -54,12 +54,17 @@ public:
 	static void sendTriggerMessage();
 	static void testTrigger(int test_duration = SEMG_DEFAULT_TEST_DURATION_SECONDS);
 	static void samplingCallback(TimerHandle_t xTimer);
+    static void ledTriggerCallback(TimerHandle_t xTimer);
 	static TimerHandle_t samplingTimer;
-	static TaskHandle_t task_handle;
+	static TimerHandle_t ledTriggerTimer;
+    static TaskHandle_t task_handle;
 	static void startSamplingTimer();
 	static void stopSamplingTimer();
+    static void startLedTrigger();
+    static void createLedTriggerTimer();
 	static void setDifficulty(int difficulty);
 	static void sensorTask(void * obj); 
+    
 };
 
 #endif

@@ -207,5 +207,7 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
 		ESP_LOGD(TAG_MSG, "Pulse width (ms): %lf", pulse_width);
 		ESP_LOGD(TAG_MSG, "FES stimulation duration (ms): %lf", fes_duration);
 		ESP_LOGD(TAG_MSG, "SEMG difficulty: %lf", difficulty);
+
+        Potentiometer::voltageSet(amplitude);
     }
 }

@@ -42,6 +42,7 @@ namespace MESSAGE_KEYS {
 
 #define GYROSCOPE_MESSAGE 1
 #define MESSAGE_CODE_TRIGGER 9
+#define EMERGENCY_STOP_MESSAGE 10
 #define NE_HANDSHAKE 0
 
 #endif

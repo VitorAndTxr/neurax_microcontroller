@@ -98,13 +98,15 @@ void Session::pauseFromSession() {
 }
 
 void Session::pauseFromMessageHandler() {
-	ESP_LOGI(TAG_SESSION, "p");
-    Session::suspendSessionTask();
-	Session::status.paused = true;
+	//ESP_LOGI(TAG_SESSION, "p");
+    //Session::suspendSessionTask();
+	Fes::stimulating = false;
+	Fes::emergency_stop = true;
+	//Session::status.paused = true;
 	if (Fes::isOn) {
-		Fes::stopFes();
+		//Fes::stopFes();
 		Session::status.interrupted_stimuli_amount++;
-		delay(1);	
+		//delay(1);	
 	}
 	Fes::hBridgeReset();
 	
@@ -116,13 +118,14 @@ void Session::pauseFromMessageHandler() {
 
 void Session::suspendSessionTask() {
 	if (Session::task_handle != NULL) {
-		ESP_LOGD(TAG_SESSION, "Session task suspended.");
+		//ESP_LOGD(TAG_SESSION, "Session task suspended.");
 		vTaskSuspend(Session::task_handle);	
 	}
 }
 
 void Session::resume() {
     Session::status.paused = false;
+	Fes::emergency_stop = false;
 	if (Session::task_handle != NULL) {
 		Semg::sample_amount = 0;
 
@@ -227,6 +230,9 @@ void Session::detectionAndStimulation() {
 			i=true;
 			Serial.println("estimulando");
 		}	
+
+		
+		//xTimerStart(Semg::ledTriggerTimer, 0);
 		/*if (Semg::impedanceTooLow()) {
 			Session::pause();
 		}*/
@@ -235,11 +241,21 @@ void Session::detectionAndStimulation() {
 		}
 		else {
 			//Semg::sendTriggerMessage(); ja esta no istrigger 
+			//delay(2000);
 			Fes::fesLoop();
 			
 			if(!Fes::emergency_stop) {
 				Session::status.complete_stimuli_amount++;
 				//Session::sendSessionStatus();
+			} else {
+				DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_OBJECT_SIZE(2));
+				if (!message_document) {
+					printDebug("teste tstes");
+				}
+				(*message_document)[MESSAGE_KEYS::CODE] = EMERGENCY_STOP_MESSAGE;
+				(*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
+
+				MessageHandler::sendMessage(message_document);
 			}
 
 			Fes::emergency_stop = false;

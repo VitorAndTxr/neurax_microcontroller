@@ -38,11 +38,26 @@ namespace MESSAGE_KEYS {
         const char TIME_OF_LAST_TRIGGER[] = "tlt";
         const char SESSION_DURATION[] = "sd";
     }
+    namespace streaming {
+        const char TIMESTAMP[] = "t";
+        const char VALUES[] = "v";
+        const char RATE[] = "rate";
+        const char TYPE[] = "type";
+        const char FORMAT[] = "format";
+    }
 }
 
 #define GYROSCOPE_MESSAGE 1
 #define MESSAGE_CODE_TRIGGER 9
 #define EMERGENCY_STOP_MESSAGE 10
 #define NE_HANDSHAKE 0
+
+// sEMG Streaming commands
+namespace SEMG_STREAMING {
+    const int START_STREAM = 11;
+    const int STOP_STREAM = 12;
+    const int STREAM_DATA = 13;
+    const int CONFIG_STREAM = 14;
+};
 
 #endif

@@ -144,6 +144,21 @@ void MessageHandler::interpretMessage(String data)
 			Semg::testTrigger();
 			break;
 
+        case SEMG_STREAMING::CONFIG_STREAM:
+			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::CONFIG_STREAM");
+            MessageHandler::handleStreamingConfigMessage(message);
+            break;
+
+        case SEMG_STREAMING::START_STREAM:
+			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::START_STREAM");
+            Semg::enableStreaming();
+            break;
+
+        case SEMG_STREAMING::STOP_STREAM:
+			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::STOP_STREAM");
+            Semg::disableStreaming();
+            break;
+
         default:
 			ESP_LOGW(TAG_MSG, "Unknown message code");
             break;
@@ -201,7 +216,7 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
 		Fes::parameters.fes_duration_s = fes_duration;
 
 		Semg::setDifficulty(difficulty);
-		
+
 		ESP_LOGD(TAG_MSG, "Amplitude: %lf", amplitude);
 		ESP_LOGD(TAG_MSG, "Frequency: %lf", frequency);
 		ESP_LOGD(TAG_MSG, "Pulse width (ms): %lf", pulse_width);
@@ -209,5 +224,20 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
 		ESP_LOGD(TAG_MSG, "SEMG difficulty: %lf", difficulty);
 
         Potentiometer::voltageSet(amplitude);
+    }
+}
+
+void MessageHandler::handleStreamingConfigMessage(DynamicJsonDocument &message) {
+    if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
+		ESP_LOGI(TAG_MSG, "Parsing received streaming configuration");
+
+		JsonObject body = message[MESSAGE_KEYS::BODY].as<JsonObject>();
+
+		int rate = body[MESSAGE_KEYS::streaming::RATE] | DEFAULT_STREAMING_RATE;
+		const char* type = body[MESSAGE_KEYS::streaming::TYPE] | "raw";
+
+		ESP_LOGI(TAG_MSG, "Streaming config - Rate: %d Hz, Type: %s", rate, type);
+
+		Semg::configureStreaming(rate, type);
     }
 }

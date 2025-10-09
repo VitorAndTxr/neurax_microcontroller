@@ -17,6 +17,21 @@ struct SemgParameters {
     static float difficulty;
     static float threshold;
 };
+
+// Streaming data types
+enum StreamingDataType {
+    STREAMING_RAW,      // Raw ADC values
+    STREAMING_FILTERED, // Butterworth filtered
+    STREAMING_RMS       // RMS envelope
+};
+
+// Streaming configuration
+struct StreamingConfig {
+    int rate;                      // Hz - samples per second
+    StreamingDataType type;        // Data type to stream
+    int samples_per_packet;        // Number of samples per message
+    int packets_per_second;        // Calculated from rate and samples_per_packet
+};
 class Semg
 {
 private:
@@ -36,6 +51,19 @@ private:
     static float getFilteredSample();
 	static void filterSamplesArray();
 	static const float sampling_period_ms;
+
+    // Streaming private members
+    static float streaming_buffer[STREAMING_BUFFER_SIZE];
+    static volatile int buffer_write_index;
+    static volatile int buffer_read_index;
+    static volatile bool streaming_active;
+    static StreamingConfig streaming_config;
+    static TaskHandle_t streaming_task_handle;
+    static unsigned long streaming_start_time;
+
+    static void writeToBuffer(float value);
+    static float applyStreamingFilter(float value);
+    static void sendStreamingMessage(float* samples, int count);
 
 public:
 	static volatile int sample_amount;
@@ -63,8 +91,17 @@ public:
     static void startLedTrigger();
     static void createLedTriggerTimer();
 	static void setDifficulty(int difficulty);
-	static void sensorTask(void * obj); 
-    
+	static void sensorTask(void * obj);
+
+    // Streaming public API
+    static void configureStreaming(int rate, const char* type_str);
+    static void enableStreaming();
+    static void disableStreaming();
+    static bool isStreaming();
+    static void streamingTask(void* parameters);
+    static int getAvailableSamples();
+    static void readStreamingSamples(float* output, int count);
+
 };
 
 #endif

@@ -71,8 +71,12 @@ The system operates on a **command-response** pattern over Bluetooth:
 
 **Message protocol** (`src/modules/message_handler/CommunicationProtocol.h`):
 - All messages are JSON: `{"cd": <code>, "mt": "<method>", "bd": {...}}`
-- Methods: `r` (read), `w` (write), `x` (execute)
-- Codes 1-9 map to different commands (see `src/modules/message_handler/README.md`)
+- Methods: `r` (read), `w` (write), `x` (execute), `a` (acknowledgment)
+- Message codes:
+  - `1`: Gyroscope commands
+  - `2-8`: Session commands (start, stop, pause, resume, single stimulus, parameters, status)
+  - `9`: Trigger test
+  - `11-14`: sEMG streaming commands (start, stop, data, config)
 
 ### Session State Machine
 
@@ -116,6 +120,10 @@ while (millis() - startTime < duration) {
 
 ### sEMG Signal Processing Pipeline
 
+The sEMG module supports **two operating modes**: trigger detection for FES sessions and real-time data streaming.
+
+#### Mode 1: Trigger Detection (FES Sessions)
+
 **Real-time filtering** (`src/modules/semg/`):
 1. **Timer ISR** (1.162ms period): ADC sampling → `raw_value[]` buffer
 2. **Butterworth filter**: 2nd-order bandpass (10-40 Hz) via `libFilter`
@@ -127,6 +135,26 @@ while (millis() - startTime < duration) {
 - Filters entire buffer in one pass
 - Compares average to `Semg::parameters.threshold`
 - Returns boolean, sends BT message if triggered
+
+#### Mode 2: Real-Time Streaming
+
+**Streaming architecture** (`src/modules/semg/Semg.cpp:298-483`):
+1. **Timer callback** writes to circular buffer (`STREAMING_BUFFER_SIZE=200` samples)
+2. **Streaming task** (Core 1, priority 10) sends packets via Bluetooth
+3. **Configurable data types**: `raw`, `filtered` (Butterworth), or `rms` (envelope)
+4. **Configurable rates**: 10-200 Hz (default: 20 Hz, recommended: 10-30 Hz for 9600 baud Bluetooth)
+
+**Flow**:
+1. `Semg::configureStreaming(rate, type)` → Set parameters
+2. `Semg::enableStreaming()` → Start sampling timer + streaming task
+3. `samplingCallback()` → Reads ADC, applies filter, writes to buffer
+4. `streamingTask()` → Batches samples, sends JSON packets at configured rate
+5. `Semg::disableStreaming()` → Stop task and reset buffer
+
+**Safety features**:
+- Automatic timeout after 10 minutes (configurable via `STREAMING_TIMEOUT_MINUTES`)
+- Buffer overflow protection (drops oldest samples)
+- Bluetooth disconnect detection
 
 ## Module Interdependencies
 
@@ -160,10 +188,12 @@ When modifying these areas, extreme caution required:
 
 ## Bluetooth Protocol Testing
 
-Use `src/modules/message_handler/sample_messages.json` for test messages:
+Use `src/modules/message_handler/sample_messages.json` for reference.
 
-**Common test sequence**:
-1. Connect via Bluetooth terminal app
+### Testing FES Sessions
+
+**Basic session test sequence**:
+1. Connect via Bluetooth terminal app (9600 baud)
 2. Send: `{"cd":7,"mt":"w","bd":{"a":3.0,"f":38.0,"pw":12.0,"df":5,"pd":5}}` (set parameters)
 3. Send: `{"cd":2,"mt":"x"}` (start session)
 4. Wait for trigger detection
@@ -177,6 +207,100 @@ Use `src/modules/message_handler/sample_messages.json` for test messages:
 [sEMG] Variavel istrigger = 1
 [FES] Starting stimulation
 ```
+
+### Testing sEMG Streaming
+
+**Real-time streaming test sequence**:
+
+1. **Configure streaming parameters** (optional, defaults: 50 Hz, raw data):
+```json
+{"cd":14,"mt":"w","bd":{"rate":100,"type":"filtered"}}
+```
+Available types: `"raw"`, `"filtered"`, `"rms"`
+
+**ACK response received:**
+```json
+{"cd":14,"mt":"a"}
+```
+
+2. **Start streaming**:
+```json
+{"cd":11,"mt":"x"}
+```
+
+**ACK response received:**
+```json
+{"cd":11,"mt":"a"}
+```
+
+3. **Receive streaming data** (automatically sent at configured rate):
+```json
+{"cd":13,"mt":"w","bd":{"t":12345,"v":[23.4,25.1,22.8,24.5,26.2,23.9,25.7,24.1,22.5,25.4]}}
+```
+- `"t"`: Timestamp (milliseconds since boot)
+- `"v"`: Array of sEMG values (5-10 samples per packet depending on rate)
+
+4. **Stop streaming**:
+```json
+{"cd":12,"mt":"x"}
+```
+
+**ACK response received:**
+```json
+{"cd":12,"mt":"a"}
+```
+
+**Expected streaming logs**:
+```
+[MSG] === Received data ===
+[MSG] --->
+[MSG] {"cd":14,"mt":"w","bd":{"rate":100,"type":"filtered"}}
+[MSG] SEMG_STREAMING::CONFIG_STREAM
+[sEMG] Configuring streaming: rate=100 Hz, type=filtered
+[sEMG] Streaming config: 10 samples/packet, 10 packets/second
+[MSG] Sending ACK for message code 14
+[MSG] Serialized message:
+[MSG] {"cd":14,"mt":"a"}
+[MSG] Message sent!
+
+[MSG] === Received data ===
+[MSG] --->
+[MSG] {"cd":11,"mt":"x"}
+[MSG] SEMG_STREAMING::START_STREAM
+[sEMG] Enabling streaming...
+[sEMG] Streaming task created successfully
+[sEMG] Streaming task started
+[MSG] Sending ACK for message code 11
+[MSG] Serialized message:
+[MSG] {"cd":11,"mt":"a"}
+[MSG] Message sent!
+
+[MSG] Sending message...
+[MSG] {"cd":13,"mt":"w","bd":{"t":12345,"v":[...]}}
+
+[MSG] === Received data ===
+[MSG] --->
+[MSG] {"cd":12,"mt":"x"}
+[MSG] SEMG_STREAMING::STOP_STREAM
+[sEMG] Disabling streaming...
+[sEMG] Streaming task finished
+[MSG] Sending ACK for message code 12
+[MSG] Serialized message:
+[MSG] {"cd":12,"mt":"a"}
+[MSG] Message sent!
+```
+
+**Streaming rates and packet structure**:
+- **Rate < 100 Hz**: 5 samples/packet
+- **Rate ≥ 100 Hz**: 10 samples/packet
+- Packets sent at `rate / samples_per_packet` Hz (e.g., 100 Hz → 10 packets/sec)
+
+**Important notes**:
+- Streaming automatically stops after 10 minutes or if Bluetooth disconnects
+- Cannot run streaming and FES session simultaneously (shared timer)
+- Buffer holds 200 samples; overflow drops oldest data
+- **Bluetooth bandwidth limitation**: At 9600 baud, use rates ≤ 30 Hz to avoid buffer overflow
+- For higher rates (50-200 Hz), consider upgrading Bluetooth module to 115200 baud
 
 ## Common Pitfalls
 

@@ -41,43 +41,72 @@ void MessageHandler::start() {
 void MessageHandler::loop(void * parameters)
 {
 	ESP_LOGI(TAG_MSG, "Starting Message Handler loop");
-   
-    
+
+
     while (true) {
         //ESP_LOGI(TAG_MSG, "no loop");
-   
+
         if (Bluetooth::isConnected()) {
             MessageHandler::handleIncomingMessages();
-    
+
         }
         else {
             Bluetooth::waitForConnection();
         }
+
+        // Small delay to allow other tasks to run
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
-void MessageHandler::sendMessage(DynamicJsonDocument* message) {
-    
-    
+bool MessageHandler::sendMessage(DynamicJsonDocument* message) {
+
+    int message_code = (*message)[MESSAGE_KEYS::CODE];
+    bool is_streaming_data = (message_code == SEMG_STREAMING::STREAM_DATA);
+
+    // Check if this is an ACK message (method = "a")
+    String method = (*message)[MESSAGE_KEYS::METHOD];
+    bool is_ack = (method == "a");
+
     String serialized_message;
     serializeJson(*message, serialized_message);
 
-	ESP_LOGI(TAG_MSG, "Serialized message:");
-	ESP_LOGI(TAG_MSG, "%s", serialized_message.c_str());
-
-    if (Bluetooth::isConnected()) {
-		ESP_LOGI(TAG_MSG, "Sending message...");
-	    Bluetooth::sendData(serialized_message);
-		ESP_LOGI(TAG_MSG, "Message sent!");
+    // Reduced logging for streaming data packets (too verbose)
+    if (!is_streaming_data) {
+		ESP_LOGI(TAG_MSG, "Serialized message:");
+		ESP_LOGI(TAG_MSG, "%s", serialized_message.c_str());
     }
-    //delay(200);
-    vTaskDelay(pdMS_TO_TICKS(200));
-    //(*message).clear();
+
+    bool success = false;
+    if (Bluetooth::isConnected()) {
+        if (!is_streaming_data) {
+			ESP_LOGI(TAG_MSG, "Sending message...");
+        }
+	    success = Bluetooth::sendData(serialized_message);
+        if (!is_streaming_data) {
+            if (success) {
+				ESP_LOGI(TAG_MSG, "Message sent!");
+            } else {
+				ESP_LOGW(TAG_MSG, "Message send failed!");
+            }
+        }
+    }
+
+    // Only delay for non-streaming messages AND non-ACK messages
+    // ACK messages should not delay to avoid blocking streaming
+    if (!is_streaming_data && !is_ack) {
+        vTaskDelay(pdMS_TO_TICKS(200));
+    }
 
     if (message != NULL){
         delete message;
     }
-    ESP_LOGI(TAG_MSG, "getting out message send");
+
+    if (!is_streaming_data) {
+		ESP_LOGI(TAG_MSG, "getting out message send");
+    }
+
+    return success;
 }
 
 void MessageHandler::handleIncomingMessages() {
@@ -147,16 +176,19 @@ void MessageHandler::interpretMessage(String data)
         case SEMG_STREAMING::CONFIG_STREAM:
 			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::CONFIG_STREAM");
             MessageHandler::handleStreamingConfigMessage(message);
+            MessageHandler::sendAck(SEMG_STREAMING::CONFIG_STREAM);
             break;
 
         case SEMG_STREAMING::START_STREAM:
 			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::START_STREAM");
             Semg::enableStreaming();
+            MessageHandler::sendAck(SEMG_STREAMING::START_STREAM);
             break;
 
         case SEMG_STREAMING::STOP_STREAM:
 			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::STOP_STREAM");
             Semg::disableStreaming();
+            MessageHandler::sendAck(SEMG_STREAMING::STOP_STREAM);
             break;
 
         default:
@@ -240,4 +272,15 @@ void MessageHandler::handleStreamingConfigMessage(DynamicJsonDocument &message) 
 
 		Semg::configureStreaming(rate, type);
     }
+}
+
+void MessageHandler::sendAck(int message_code) {
+	ESP_LOGI(TAG_MSG, "Sending ACK for message code %d", message_code);
+
+	DynamicJsonDocument *ack_message = new DynamicJsonDocument(JSON_BUFFER_SIZE);
+
+	(*ack_message)[MESSAGE_KEYS::CODE] = message_code;
+	(*ack_message)[MESSAGE_KEYS::METHOD] = "a";  // String literal to avoid ASCII serialization
+
+	MessageHandler::sendMessage(ack_message);
 }

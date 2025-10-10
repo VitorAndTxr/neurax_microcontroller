@@ -57,37 +57,15 @@ String Bluetooth::readData() {
     return data;
 }
 
-void Bluetooth::sendData(String &data) {
-    ESP_LOGI(TAG_BLU, "send data starting");
-    volatile bool available = false;
-    while (!available){
-        ESP_LOGI(TAG_BLU, "checando se esta disponivel");
-		ESP_LOGI(TAG_BLU, "Esperando mutex pra enviar...");
-
-		if (xSemaphoreTake(semaphore_bluetooth, portMAX_DELAY)) {
-			ESP_LOGI(TAG_BLU, "Pegou mutex pra enviar.");
-
-			if(BTSerial.availableForWrite()){
-				ESP_LOGI(TAG_BLU, "Ficou disponivel. Realizando o envio");
-				BTSerial.println(data);
-				BTSerial.flush();
-				available = true;
-			}
-			xSemaphoreGive(semaphore_bluetooth);
-			ESP_LOGI(TAG_BLU, "Liberou mutex de enviar.");
-
-		}
+bool Bluetooth::sendData(String &data) {
+    // Fast path for streaming data with minimal logging
+    if (xSemaphoreTake(semaphore_bluetooth, pdMS_TO_TICKS(100))) {
+        BTSerial.println(data);
+        xSemaphoreGive(semaphore_bluetooth);
+        return true;
+    } else {
+        // Mutex timeout - log warning
+        ESP_LOGW(TAG_BLU, "Send failed: mutex timeout");
+        return false;
     }
-    ESP_LOGI(TAG_BLU, "send data finish");
-    // volatile int teste =BTSerial.availableForWrite() ;
-    // ESP_LOGI(TAG_BLU, "resultado do bt Serial avaliable for write %d", teste);
-    // if (teste) {
-
-    //     ESP_LOGI(TAG_BLU, "qualquer coisa 111111111...");
-    //     BTSerial.println(data);
-    //     // delay(1);
-    //     BTSerial.flush();
-    //     // delay(1); 
-    // }
-    //  ESP_LOGI(TAG_BLU, "qualquer coisa 2222222222...");
 }

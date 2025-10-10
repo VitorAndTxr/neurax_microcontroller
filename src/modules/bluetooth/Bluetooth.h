@@ -16,7 +16,7 @@ public:
     ~Bluetooth() = delete;
     static void init();
     static String readData();
-    static void sendData(String &data);
+    static bool sendData(String &data);
     static bool isConnected();
 	static void waitForConnection();
 };

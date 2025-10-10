@@ -126,6 +126,14 @@ void Semg::samplingCallback(TimerHandle_t xTimer) {
 
         // Write to circular buffer
         writeToBuffer(processed_value);
+
+        // Debug log every 50 samples
+        static int sample_counter = 0;
+        sample_counter++;
+        if (sample_counter % 50 == 0) {
+			ESP_LOGD(TAG_SEMG, "Sampling callback: %d samples written, value=%.2f",
+                     sample_counter, processed_value);
+        }
     }
 }
 
@@ -169,6 +177,30 @@ void Semg::startSamplingTimer() {
         samplingTimer = xTimerCreate(
             "sEMG timer",           // Nome do temporizador (para fins de depuração)
             pdMS_TO_TICKS(Semg::sampling_period_ms),  // Período em milissegundos
+            pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
+            (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
+            Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
+        );
+   }
+
+    // Verificação se o temporizador foi criado com sucesso
+    if (samplingTimer != NULL) {
+       if ( xTimerStart(samplingTimer, 0) != pdPASS) {
+            ESP_LOGE(TAG_SEMG, "Restarting sEmg timer!");
+       }
+		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
+    } else {
+		ESP_LOGE(TAG_SEMG, "Error creating sEmg timer!");
+    }
+    //ESP_LOGE(TAG_SEMG, "Aquiiiiiiiiiii!");
+}
+
+void Semg::startStreamingSamplingTimer(float period_ms) {
+	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
+    if (samplingTimer == NULL) {
+        samplingTimer = xTimerCreate(
+            "sEMG timer",           // Nome do temporizador (para fins de depuração)
+            pdMS_TO_TICKS(period_ms),  // Período em milissegundos
             pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
             (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
             Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
@@ -326,6 +358,11 @@ void Semg::configureStreaming(int rate, const char* type_str) {
 
 void Semg::enableStreaming() {
 	ESP_LOGI(TAG_SEMG, "Enabling streaming...");
+	ESP_LOGI(TAG_SEMG, "Current config: rate=%d Hz, type=%d, samples/pkt=%d, pkts/sec=%d",
+             streaming_config.rate,
+             streaming_config.type,
+             streaming_config.samples_per_packet,
+             streaming_config.packets_per_second);
 
     // Reset buffer indices
     buffer_write_index = 0;
@@ -333,26 +370,42 @@ void Semg::enableStreaming() {
     streaming_active = true;
     streaming_start_time = millis();
 
-    // Start sampling timer if not already running
-    Semg::startSamplingTimer();
+	ESP_LOGI(TAG_SEMG, "Buffer reset: write_index=%d, read_index=%d",
+             buffer_write_index, buffer_read_index);
+
+    // Start sampling timer at configured streaming rate
+    // For 20Hz streaming: period = 1000ms / 20Hz = 50ms
+    float streaming_period_ms = 1000.0f / streaming_config.rate;
+    Semg::startStreamingSamplingTimer(streaming_period_ms);
+
+	ESP_LOGI(TAG_SEMG, "Sampling timer started (period=%.2f ms, rate=%d Hz)",
+             streaming_period_ms, streaming_config.rate);
+
+    // Check available heap before creating task
+    ESP_LOGI(TAG_SEMG, "Free heap before task creation: %d bytes", esp_get_free_heap_size());
 
     // Create streaming task
+    ESP_LOGI(TAG_SEMG, "Creating streaming task...");
     BaseType_t result = xTaskCreatePinnedToCore(
         Semg::streamingTask,
         "sEMG Streaming",
         4096,
         NULL,
-        10, // Priority lower than MessageHandler
+        15, // Priority between MessageHandler (20) and other tasks
         &streaming_task_handle,
         1   // Core 1 (same as MessageHandler)
     );
 
+	ESP_LOGI(TAG_SEMG, "xTaskCreatePinnedToCore returned: %d (pdPASS=%d)", result, pdPASS);
+
     if (result == pdPASS) {
-		ESP_LOGI(TAG_SEMG, "Streaming task created successfully");
+		ESP_LOGI(TAG_SEMG, "Streaming task created successfully, handle=%p", streaming_task_handle);
     } else {
-		ESP_LOGE(TAG_SEMG, "Failed to create streaming task");
+		ESP_LOGE(TAG_SEMG, "Failed to create streaming task, error code: %d", result);
         streaming_active = false;
     }
+
+	ESP_LOGI(TAG_SEMG, "enableStreaming() finished");
 }
 
 void Semg::disableStreaming() {
@@ -374,8 +427,12 @@ bool Semg::isStreaming() {
 
 int Semg::getAvailableSamples() {
     // Calculate available samples in circular buffer
+    // Use critical section to avoid race conditions with ISR
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL(&mux);
     int write = buffer_write_index;
     int read = buffer_read_index;
+    portEXIT_CRITICAL(&mux);
 
     if (write >= read) {
         return write - read;
@@ -385,21 +442,36 @@ int Semg::getAvailableSamples() {
 }
 
 void Semg::readStreamingSamples(float* output, int count) {
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     for (int i = 0; i < count; i++) {
+        portENTER_CRITICAL(&mux);
         output[i] = streaming_buffer[buffer_read_index];
         buffer_read_index = (buffer_read_index + 1) % STREAMING_BUFFER_SIZE;
+        portEXIT_CRITICAL(&mux);
     }
 }
 
 void Semg::writeToBuffer(float value) {
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL_ISR(&mux);
+
     streaming_buffer[buffer_write_index] = value;
     buffer_write_index = (buffer_write_index + 1) % STREAMING_BUFFER_SIZE;
 
     // Check for buffer overflow (write catching up to read)
     if (buffer_write_index == buffer_read_index) {
-		ESP_LOGW(TAG_SEMG, "Streaming buffer overflow! Dropping oldest sample.");
+        // Buffer full - drop oldest sample
         buffer_read_index = (buffer_read_index + 1) % STREAMING_BUFFER_SIZE;
+
+        // Log overflow (but limit frequency to avoid log spam)
+        static unsigned long last_overflow_log = 0;
+        if (millis() - last_overflow_log > 1000) {
+            ESP_LOGW(TAG_SEMG, "Streaming buffer overflow! Dropping oldest samples.");
+            last_overflow_log = millis();
+        }
     }
+
+    portEXIT_CRITICAL_ISR(&mux);
 }
 
 float Semg::applyStreamingFilter(float value) {
@@ -419,12 +491,12 @@ float Semg::applyStreamingFilter(float value) {
     }
 }
 
-void Semg::sendStreamingMessage(float* samples, int count) {
+bool Semg::sendStreamingMessage(float* samples, int count) {
     // Create JSON document
     DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_BUFFER_SIZE);
 
     (*message_document)[MESSAGE_KEYS::CODE] = SEMG_STREAMING::STREAM_DATA;
-    (*message_document)[MESSAGE_KEYS::METHOD] = MESSAGE_METHOD::WRITE;
+    (*message_document)[MESSAGE_KEYS::METHOD] = "w";  // String literal to avoid ASCII serialization
 
     JsonObject body = (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
     body[MESSAGE_KEYS::streaming::TIMESTAMP] = millis();
@@ -435,17 +507,30 @@ void Semg::sendStreamingMessage(float* samples, int count) {
         values_array.add(roundf(samples[i] * 10.0f) / 10.0f);
     }
 
-    // Send via MessageHandler
-    MessageHandler::sendMessage(message_document);
+    // Send via MessageHandler - return success/fail
+    return MessageHandler::sendMessage(message_document);
 }
 
 void Semg::streamingTask(void* parameters) {
 	ESP_LOGI(TAG_SEMG, "Streaming task started");
+	ESP_LOGI(TAG_SEMG, "Config: %d samples/pkt, %d pkts/sec, interval: %d ms",
+             streaming_config.samples_per_packet,
+             streaming_config.packets_per_second,
+             1000 / streaming_config.packets_per_second);
 
-    TickType_t last_send = xTaskGetTickCount();
     float samples[MAX_SAMPLES_PER_PACKET];
+    int packet_count = 0;
+    int loop_count = 0;
+    const int interval_ms = 1000 / streaming_config.packets_per_second;
 
     while (streaming_active) {
+        loop_count++;
+
+        // Debug: Log loop iterations for first 10 cycles
+        if (loop_count <= 10) {
+            ESP_LOGI(TAG_SEMG, "Loop iteration #%d, streaming_active=%d", loop_count, streaming_active);
+        }
+
         // Check timeout
         unsigned long elapsed_minutes = (millis() - streaming_start_time) / 60000;
         if (elapsed_minutes >= STREAMING_TIMEOUT_MINUTES) {
@@ -454,31 +539,66 @@ void Semg::streamingTask(void* parameters) {
             break;
         }
 
-        // Wait for next send interval
-        TickType_t interval = pdMS_TO_TICKS(1000 / streaming_config.packets_per_second);
-        vTaskDelayUntil(&last_send, interval);
-
         // Check if enough samples are available
         int available = getAvailableSamples();
+
+        // Debug: Log sample availability for first 10 cycles
+        if (loop_count <= 10) {
+            ESP_LOGI(TAG_SEMG, "Available samples: %d, needed: %d", available, streaming_config.samples_per_packet);
+        }
+
         if (available >= streaming_config.samples_per_packet) {
             // Read samples from buffer
+            if (loop_count <= 10) {
+                ESP_LOGI(TAG_SEMG, "Reading %d samples from buffer...", streaming_config.samples_per_packet);
+            }
             readStreamingSamples(samples, streaming_config.samples_per_packet);
 
             // Send via Bluetooth
             if (Bluetooth::isConnected()) {
-                sendStreamingMessage(samples, streaming_config.samples_per_packet);
+                if (loop_count <= 10) {
+                    ESP_LOGI(TAG_SEMG, "Calling sendStreamingMessage...");
+                }
+                bool sent = sendStreamingMessage(samples, streaming_config.samples_per_packet);
+                if (loop_count <= 10) {
+                    ESP_LOGI(TAG_SEMG, "sendStreamingMessage returned: %d", sent);
+                }
+                if (sent) {
+                    packet_count++;
+                    // Log first 5 packets and then every 10 packets
+                    if (packet_count <= 5 || packet_count % 10 == 0) {
+						ESP_LOGI(TAG_SEMG, "Sent packet #%d (%d samples, %d available in buffer)",
+                                 packet_count, streaming_config.samples_per_packet, available);
+                    }
+                } else {
+					ESP_LOGW(TAG_SEMG, "Failed to send packet #%d, retrying next cycle", packet_count + 1);
+                }
             } else {
 				ESP_LOGW(TAG_SEMG, "Bluetooth disconnected, stopping streaming");
                 Semg::disableStreaming();
                 break;
             }
         } else {
-			ESP_LOGD(TAG_SEMG, "Not enough samples (%d/%d), skipping packet",
-                     available, streaming_config.samples_per_packet);
+            // Only log if we're in the first 10 cycles or if we've sent packets before
+            if (loop_count <= 10 || packet_count > 0) {
+                ESP_LOGW(TAG_SEMG, "Not enough samples (%d/%d), skipping packet",
+                         available, streaming_config.samples_per_packet);
+            }
+        }
+
+        // Wait for next send interval using relative delay
+        if (loop_count <= 10) {
+            ESP_LOGI(TAG_SEMG, "About to vTaskDelay for %d ms...", interval_ms);
+        }
+        vTaskDelay(pdMS_TO_TICKS(interval_ms));
+
+        // Debug: Log after delay for first 10 cycles
+        if (loop_count <= 10) {
+            ESP_LOGI(TAG_SEMG, "After delay, loop_count=%d", loop_count);
         }
     }
 
-	ESP_LOGI(TAG_SEMG, "Streaming task finished");
+	ESP_LOGI(TAG_SEMG, "Streaming task finished (sent %d packets total)", packet_count);
     vTaskDelete(NULL);
 }
 

@@ -63,7 +63,7 @@ private:
 
     static void writeToBuffer(float value);
     static float applyStreamingFilter(float value);
-    static void sendStreamingMessage(float* samples, int count);
+    static bool sendStreamingMessage(float* samples, int count);
 
 public:
 	static volatile int sample_amount;
@@ -87,6 +87,7 @@ public:
 	static TimerHandle_t ledTriggerTimer;
     static TaskHandle_t task_handle;
 	static void startSamplingTimer();
+    static void startStreamingSamplingTimer(float period_ms);
 	static void stopSamplingTimer();
     static void startLedTrigger();
     static void createLedTriggerTimer();

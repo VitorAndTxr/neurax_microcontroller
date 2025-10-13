@@ -26,6 +26,6 @@ float SemgFilter::filter(float value)
 {
     value = SemgFilter::low_pass.filterIn(value);
     value = SemgFilter::high_pass.filterIn(value);
-    value = abs(value) * 100;
+    value = value * 100;
     return value;
 }

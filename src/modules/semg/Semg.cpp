@@ -286,7 +286,7 @@ float Semg::acquireAverage(int readings_amount) {
 	Semg::sample_amount = 0;
     
     for (int i = 0; i < readings_amount; i++) {
-        Semg::output += Semg::getFilteredSample();
+        Semg::output += abs(Semg::getFilteredSample());
     }
     
     Semg::output /= (float)readings_amount;

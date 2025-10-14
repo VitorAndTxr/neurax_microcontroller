@@ -147,6 +147,7 @@ void Semg::filterSamplesArray() {
         Semg::filtered_value[i] = SemgFilter::filter(Semg::filtered_value[i]);
     }
 }
+
 void Semg::createLedTriggerTimer(){
     if (ledTriggerTimer == NULL) {
         ledTriggerTimer = xTimerCreate(
@@ -171,8 +172,12 @@ void Semg::createLedTriggerTimer(){
     }
 
 }
+
 void Semg::startSamplingTimer() {
 	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
+    
+    SemgFilter::updateSamplingRate(2, 10, 40);
+
     if (samplingTimer == NULL) {
         samplingTimer = xTimerCreate(
             "sEMG timer",           // Nome do temporizador (para fins de depuração)
@@ -341,6 +346,12 @@ void Semg::configureStreaming(int rate, const char* type_str) {
         streaming_config.type = STREAMING_RAW;
     } else if (strcmp(type_str, "filtered") == 0) {
         streaming_config.type = STREAMING_FILTERED;
+
+        // ✅ Configure filter ONCE when streaming is configured
+        float sampling_time_ms = 1000.0f / (float)rate;
+        SemgFilter::updateSamplingRate(sampling_time_ms, 10, 40, false);
+        ESP_LOGI(TAG_SEMG, "Updated filter: %.2f ms period, 10-40 Hz bandpass + 60 Hz notch", sampling_time_ms);
+
     } else if (strcmp(type_str, "rms") == 0) {
         streaming_config.type = STREAMING_RMS;
     } else {
@@ -480,7 +491,8 @@ float Semg::applyStreamingFilter(float value) {
             return value;
 
         case STREAMING_FILTERED:
-            return SemgFilter::filter(value);
+            // Use bandpass + notch filter for cleaner signal
+            return SemgFilter::filterWithNotch(value);
 
         case STREAMING_RMS:
             // Simple RMS: return absolute value (full RMS would require windowing)
@@ -522,6 +534,8 @@ void Semg::streamingTask(void* parameters) {
     int packet_count = 0;
     int loop_count = 0;
     const int interval_ms = 1000 / streaming_config.packets_per_second;
+
+    // ✅ Filter already configured in configureStreaming() - no need to update here
 
     while (streaming_active) {
         loop_count++;

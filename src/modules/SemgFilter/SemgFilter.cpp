@@ -23,14 +23,14 @@ Filter SemgFilter::low_pass(
 );
 
 // Notch filter for 60 Hz power line interference
-// Default: 60 Hz center, 5 Hz bandwidth, 500 Hz sampling rate
-NotchFilter SemgFilter::notch_60hz(60.0f, 5.0f, 500.0f);
+// Default: 60 Hz center, 2 Hz bandwidth, 200 Hz sampling rate
+NotchFilter SemgFilter::notch_60hz(60.0f, 2.0f, 100.0f);
 
 float SemgFilter::filter(float value)
 {
     value = SemgFilter::low_pass.filterIn(value);
     value = SemgFilter::high_pass.filterIn(value);
-    value = value * 100;
+    value = value * 2000;
     return value;
 }
 
@@ -43,7 +43,7 @@ float SemgFilter::filterWithNotch(float value)
     // Then apply notch filter to remove 60 Hz interference
     value = SemgFilter::notch_60hz.filterIn(value);
 
-    value = value * 100;
+    value = value * 10;
     return value;
 }
 
@@ -59,8 +59,8 @@ void SemgFilter::updateSamplingRate(float sampling_time_ms, int low_cutoff, int 
     SemgFilter::high_pass.setSamplingTime(sampling_time_sec, !preserveState);
     SemgFilter::high_pass.setCutoffFreqHZ(low_cutoff);
 
-    // Update notch filter
-    SemgFilter::notch_60hz.setSampleRate(sample_rate_hz, !preserveState);
+    // Update notch filter - ALWAYS flush to prevent instability
+    SemgFilter::notch_60hz.setSampleRate(sample_rate_hz, true);  // Force flush
 }
 
 void SemgFilter::resetState()

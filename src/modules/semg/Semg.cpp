@@ -23,7 +23,7 @@ float Semg::streaming_buffer[STREAMING_BUFFER_SIZE] = {0};
 volatile int Semg::buffer_write_index = 0;
 volatile int Semg::buffer_read_index = 0;
 volatile bool Semg::streaming_active = false;
-StreamingConfig Semg::streaming_config = {DEFAULT_STREAMING_RATE, STREAMING_RAW, 5, 10};
+StreamingConfig Semg::streaming_config = {DEFAULT_STREAMING_RATE, STREAMING_RAW, 10, 10};
 TaskHandle_t Semg::streaming_task_handle = NULL;
 unsigned long Semg::streaming_start_time = 0;
 
@@ -123,17 +123,11 @@ void Semg::samplingCallback(TimerHandle_t xTimer) {
 
         // Apply filter if configured
         float processed_value = applyStreamingFilter(value);
+        Serial.println(processed_value);
 
         // Write to circular buffer
         writeToBuffer(processed_value);
 
-        // Debug log every 50 samples
-        static int sample_counter = 0;
-        sample_counter++;
-        if (sample_counter % 50 == 0) {
-			ESP_LOGD(TAG_SEMG, "Sampling callback: %d samples written, value=%.2f",
-                     sample_counter, processed_value);
-        }
     }
 }
 
@@ -349,8 +343,13 @@ void Semg::configureStreaming(int rate, const char* type_str) {
 
         // ✅ Configure filter ONCE when streaming is configured
         float sampling_time_ms = 1000.0f / (float)rate;
-        SemgFilter::updateSamplingRate(sampling_time_ms, 10, 40, false);
-        ESP_LOGI(TAG_SEMG, "Updated filter: %.2f ms period, 10-40 Hz bandpass + 60 Hz notch", sampling_time_ms);
+        SemgFilter::updateSamplingRate(sampling_time_ms, 10, 50, false);
+
+        // ✅ Reset filter state to prevent oscillation
+        SemgFilter::resetState();
+
+        ESP_LOGI(TAG_SEMG, "Updated filter: %.2f ms period, 10-50 Hz bandpass + 60 Hz notch (sample rate: %.1f Hz)",
+                 sampling_time_ms, 1000.0f / sampling_time_ms);
 
     } else if (strcmp(type_str, "rms") == 0) {
         streaming_config.type = STREAMING_RMS;
@@ -360,7 +359,7 @@ void Semg::configureStreaming(int rate, const char* type_str) {
     }
 
     // Calculate packets per second based on rate and samples per packet
-    streaming_config.samples_per_packet = (rate >= 100) ? 10 : 5;
+    streaming_config.samples_per_packet = 10 ;
     streaming_config.packets_per_second = rate / streaming_config.samples_per_packet;
 
 	ESP_LOGI(TAG_SEMG, "Streaming config: %d samples/packet, %d packets/second",
@@ -490,12 +489,12 @@ float Semg::applyStreamingFilter(float value) {
         case STREAMING_RAW:
             return value;
 
-        case STREAMING_FILTERED:
-            // Use bandpass + notch filter for cleaner signal
-            return SemgFilter::filterWithNotch(value);
+        case STREAMING_FILTERED: {
+            // Use bandpass + notch filter to remove 60 Hz interference
+            return SemgFilter::filter(value);
+        }
 
         case STREAMING_RMS:
-            // Simple RMS: return absolute value (full RMS would require windowing)
             return fabs(value);
 
         default:
@@ -508,7 +507,8 @@ bool Semg::sendStreamingMessage(float* samples, int count) {
     DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_BUFFER_SIZE);
 
     (*message_document)[MESSAGE_KEYS::CODE] = SEMG_STREAMING::STREAM_DATA;
-    (*message_document)[MESSAGE_KEYS::METHOD] = "w";  // String literal to avoid ASCII serialization
+    // Removed "mt" field - redundant for streaming (always "w")
+    // Saves 9 bytes per packet: 98→89 bytes
 
     JsonObject body = (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
     body[MESSAGE_KEYS::streaming::TIMESTAMP] = millis();
@@ -516,7 +516,9 @@ bool Semg::sendStreamingMessage(float* samples, int count) {
     JsonArray values_array = body.createNestedArray(MESSAGE_KEYS::streaming::VALUES);
     for (int i = 0; i < count; i++) {
         // Round to 1 decimal place to save bandwidth
-        values_array.add(roundf(samples[i] * 10.0f) / 10.0f);
+        float rounded_value = roundf(samples[i] * 10.0f) / 10.0f;
+        values_array.add(rounded_value);
+
     }
 
     // Send via MessageHandler - return success/fail
@@ -540,11 +542,6 @@ void Semg::streamingTask(void* parameters) {
     while (streaming_active) {
         loop_count++;
 
-        // Debug: Log loop iterations for first 10 cycles
-        if (loop_count <= 10) {
-            ESP_LOGI(TAG_SEMG, "Loop iteration #%d, streaming_active=%d", loop_count, streaming_active);
-        }
-
         // Check timeout
         unsigned long elapsed_minutes = (millis() - streaming_start_time) / 60000;
         if (elapsed_minutes >= STREAMING_TIMEOUT_MINUTES) {
@@ -556,34 +553,19 @@ void Semg::streamingTask(void* parameters) {
         // Check if enough samples are available
         int available = getAvailableSamples();
 
-        // Debug: Log sample availability for first 10 cycles
-        if (loop_count <= 10) {
-            ESP_LOGI(TAG_SEMG, "Available samples: %d, needed: %d", available, streaming_config.samples_per_packet);
-        }
-
         if (available >= streaming_config.samples_per_packet) {
             // Read samples from buffer
             if (loop_count <= 10) {
-                ESP_LOGI(TAG_SEMG, "Reading %d samples from buffer...", streaming_config.samples_per_packet);
+                ESP_LOGI(TAG_SEMG, "Reading %d samples from buffer (available: %d)...",
+                         streaming_config.samples_per_packet, available);
             }
             readStreamingSamples(samples, streaming_config.samples_per_packet);
 
-            // Send via Bluetooth
+            //Send via Bluetooth
             if (Bluetooth::isConnected()) {
-                if (loop_count <= 10) {
-                    ESP_LOGI(TAG_SEMG, "Calling sendStreamingMessage...");
-                }
                 bool sent = sendStreamingMessage(samples, streaming_config.samples_per_packet);
-                if (loop_count <= 10) {
-                    ESP_LOGI(TAG_SEMG, "sendStreamingMessage returned: %d", sent);
-                }
                 if (sent) {
                     packet_count++;
-                    // Log first 5 packets and then every 10 packets
-                    if (packet_count <= 5 || packet_count % 10 == 0) {
-						ESP_LOGI(TAG_SEMG, "Sent packet #%d (%d samples, %d available in buffer)",
-                                 packet_count, streaming_config.samples_per_packet, available);
-                    }
                 } else {
 					ESP_LOGW(TAG_SEMG, "Failed to send packet #%d, retrying next cycle", packet_count + 1);
                 }
@@ -593,23 +575,11 @@ void Semg::streamingTask(void* parameters) {
                 break;
             }
         } else {
-            // Only log if we're in the first 10 cycles or if we've sent packets before
-            if (loop_count <= 10 || packet_count > 0) {
-                ESP_LOGW(TAG_SEMG, "Not enough samples (%d/%d), skipping packet",
-                         available, streaming_config.samples_per_packet);
-            }
+            // Not enough samples yet - wait for next timer tick
+            vTaskDelay(pdMS_TO_TICKS(interval_ms));
         }
 
-        // Wait for next send interval using relative delay
-        if (loop_count <= 10) {
-            ESP_LOGI(TAG_SEMG, "About to vTaskDelay for %d ms...", interval_ms);
-        }
-        vTaskDelay(pdMS_TO_TICKS(interval_ms));
 
-        // Debug: Log after delay for first 10 cycles
-        if (loop_count <= 10) {
-            ESP_LOGI(TAG_SEMG, "After delay, loop_count=%d", loop_count);
-        }
     }
 
 	ESP_LOGI(TAG_SEMG, "Streaming task finished (sent %d packets total)", packet_count);

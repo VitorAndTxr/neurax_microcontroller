@@ -2,6 +2,17 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ IMPORTANT: Build and Upload Policy
+
+**DO NOT execute build or upload commands automatically.** All firmware compilation and upload operations (`pio run`, `pio run --target upload`) must be performed manually by the user. The assistant should:
+- ✅ Modify code files as requested
+- ✅ Suggest build/upload commands to the user
+- ✅ Explain what changes were made
+- ❌ **NEVER** execute `pio run` or `pio run --target upload` automatically
+- ❌ **NEVER** attempt to compile or flash the firmware without explicit user confirmation
+
+The user will handle all compilation steps themselves.
+
 ## PRISM Project - Master Architecture Overview
 
 **PRISM** (Project Research Interoperability and Standardization Model) is a comprehensive federated framework for biomedical research data management, designed to break down data silos and enable secure, standardized collaboration across research institutions.

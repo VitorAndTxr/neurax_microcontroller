@@ -4,7 +4,7 @@ const float SemgFilter::low_cuttoff_frequency = SEMG_FILTER_LOW_CUTOFF_FREQUENCY
 
 const float SemgFilter::high_cuttoff_frequency = SEMG_FILTER_HIGH_CUTOFF_FREQUENCY;
 
-const float SemgFilter::sampling_time = SEMG_SAMPLING_TIME;
+const float SemgFilter::sampling_time = 1000.0f / 215.0f;
 
 const IIR::ORDER SemgFilter::order = IIR::ORDER::OD3; // Butterworth - Oder (OD1 to OD4)
 const IIR::TYPE SemgFilter::filter_type_high_pass = IIR::TYPE::HIGHPASS;
@@ -23,14 +23,14 @@ Filter SemgFilter::low_pass(
 );
 
 // Notch filter for 60 Hz power line interference
-// Default: 60 Hz center, 2 Hz bandwidth, 200 Hz sampling rate
-NotchFilter SemgFilter::notch_60hz(60.0f, 2.0f, 100.0f);
+// Default: 60 Hz center, 2 Hz bandwidth, 215 Hz sampling rate
+NotchFilter SemgFilter::notch_60hz(60.0f, 2.0f, 215.0f);
 
 float SemgFilter::filter(float value)
 {
     value = SemgFilter::low_pass.filterIn(value);
     value = SemgFilter::high_pass.filterIn(value);
-    value = value * 2000;
+    value = value * 2;
     return value;
 }
 

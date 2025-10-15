@@ -5,6 +5,19 @@
 
 This is the firmware for an electrostimulation device. Check out the [project page here](https://dynamic-vacuum-96a.notion.site/NeuraEstimulator-Blog-5549a27e7c814812b0851a2f0c69d579?pvs=4).
 
+## 📡 Real-Time sEMG Streaming
+
+The firmware supports high-speed sEMG data streaming via **binary protocol** over Bluetooth:
+
+- **250 Hz sampling rate** (default)
+- **50 samples per packet** (200ms latency)
+- **108 bytes per packet** (72% smaller than JSON)
+- **55% bandwidth usage** @ 9600 baud (comfortable margin)
+
+For implementation details, see:
+- **Full documentation**: [`docs/BINARY_STREAMING_PROTOCOL.md`](./docs/BINARY_STREAMING_PROTOCOL.md)
+- **Quick reference**: [`docs/QUICK_REFERENCE_BINARY_PROTOCOL.md`](./docs/QUICK_REFERENCE_BINARY_PROTOCOL.md)
+
 ## Configuration values
 
 Configuration values are set in the [platformio.ini](./platformio.ini) file.
@@ -60,7 +73,15 @@ Available configurations are:
 | SEMG_SAMPLES_PER_VALUE                  | 50            |                 |
 | SEMG_SAMPLES_PER_AVERAGE                | 10            |                 |
 | SEMG_LOW_IMPEDANCE_THRESHOLD            | 10            | Voltage above which the impedance is considered too low. Value in Volts.|
-| SEMG_TRIGGER_THRESHOLD_MINIMUM            | 3            | |
+| SEMG_TRIGGER_THRESHOLD_MINIMUM          | 3             | Minimum trigger threshold voltage. |
+
+| Streaming configurations                | Default Value | Explanation     |
+|-----------------------------------------|---------------|-----------------|
+| STREAMING_BUFFER_SIZE                   | 300           | Circular buffer size for streaming samples (int16_t values). |
+| MAX_SAMPLES_PER_PACKET                  | 50            | Number of samples per binary packet. |
+| DEFAULT_STREAMING_RATE                  | 250           | Default sampling rate in Hz for real-time streaming. |
+| MAX_STREAMING_RATE                      | 500           | Maximum allowed streaming rate in Hz. |
+| STREAMING_TIMEOUT_MINUTES               | 10            | Automatic streaming stop timeout in minutes. |
 
 
 # Libraries

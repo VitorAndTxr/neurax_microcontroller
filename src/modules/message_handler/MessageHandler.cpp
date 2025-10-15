@@ -173,14 +173,8 @@ void MessageHandler::interpretMessage(String data)
 			Semg::testTrigger();
 			break;
 
-        case SEMG_STREAMING::CONFIG_STREAM:
-			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::CONFIG_STREAM");
-            MessageHandler::handleStreamingConfigMessage(message);
-            MessageHandler::sendAck(SEMG_STREAMING::CONFIG_STREAM);
-            break;
-
         case SEMG_STREAMING::START_STREAM:
-			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::START_STREAM");
+			ESP_LOGI(TAG_MSG, "SEMG_STREAMING::START_STREAM (fixed 215 Hz)");
             Semg::enableStreaming();
             MessageHandler::sendAck(SEMG_STREAMING::START_STREAM);
             break;
@@ -256,21 +250,6 @@ void MessageHandler::handleSessionParametersMessage(DynamicJsonDocument &message
 		ESP_LOGD(TAG_MSG, "SEMG difficulty: %lf", difficulty);
 
         Potentiometer::voltageSet(amplitude);
-    }
-}
-
-void MessageHandler::handleStreamingConfigMessage(DynamicJsonDocument &message) {
-    if (getMessageMethod(message)[0] == MESSAGE_METHOD::WRITE) {
-		ESP_LOGI(TAG_MSG, "Parsing received streaming configuration");
-
-		JsonObject body = message[MESSAGE_KEYS::BODY].as<JsonObject>();
-
-		int rate = body[MESSAGE_KEYS::streaming::RATE] | DEFAULT_STREAMING_RATE;
-		const char* type = body[MESSAGE_KEYS::streaming::TYPE] | "raw";
-
-		ESP_LOGI(TAG_MSG, "Streaming config - Rate: %d Hz, Type: %s", rate, type);
-
-		Semg::configureStreaming(rate, type);
     }
 }
 

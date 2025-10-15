@@ -69,3 +69,24 @@ bool Bluetooth::sendData(String &data) {
         return false;
     }
 }
+
+/**
+ * @brief Send raw binary data via Bluetooth (for binary protocol)
+ *
+ * Used by sEMG streaming to send int16_t packets without JSON overhead
+ * Mutex-protected for thread safety
+ *
+ * @param data Pointer to binary data buffer
+ * @param length Number of bytes to send
+ * @return true if sent successfully, false if mutex timeout
+ */
+bool Bluetooth::sendRawData(const uint8_t* data, size_t length) {
+    if (xSemaphoreTake(semaphore_bluetooth, pdMS_TO_TICKS(100))) {
+        BTSerial.write(data, length);
+        xSemaphoreGive(semaphore_bluetooth);
+        return true;
+    } else {
+        ESP_LOGW(TAG_BLU, "Send raw data failed: mutex timeout");
+        return false;
+    }
+}

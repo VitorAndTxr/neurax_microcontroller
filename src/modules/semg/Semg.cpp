@@ -18,12 +18,11 @@ TimerHandle_t Semg::ledTriggerTimer = NULL;
 TaskHandle_t Semg::task_handle = NULL;
 const float Semg::sampling_period_ms = SEMG_SAMPLING_PERIOD;
 
-// Streaming variables
-float Semg::streaming_buffer[STREAMING_BUFFER_SIZE] = {0};
+// Streaming variables - BINARY PROTOCOL (Fixed 215 Hz)
+int16_t Semg::streaming_buffer[STREAMING_BUFFER_SIZE] = {0};
 volatile int Semg::buffer_write_index = 0;
 volatile int Semg::buffer_read_index = 0;
 volatile bool Semg::streaming_active = false;
-StreamingConfig Semg::streaming_config = {DEFAULT_STREAMING_RATE, STREAMING_RAW, 10, 10};
 TaskHandle_t Semg::streaming_task_handle = NULL;
 unsigned long Semg::streaming_start_time = 0;
 
@@ -111,23 +110,10 @@ bool Semg::impedanceTooLow() {
 }
 
 void Semg::samplingCallback(TimerHandle_t xTimer) {
-	// Mode 1: Session active (original behavior)
+	// Only used for Session mode (FES trigger detection)
+    // Streaming mode uses ADC continuous mode instead
     if (Session::status.ongoing) {
         vTaskResume(Semg::task_handle);
-    }
-
-    // Mode 2: Streaming active (write to circular buffer)
-    if (streaming_active) {
-        // Read ADC value
-        float value = Adc::getValue(SEMG_ADC_PIN);
-
-        // Apply filter if configured
-        float processed_value = applyStreamingFilter(value);
-        Serial.println(processed_value);
-
-        // Write to circular buffer
-        writeToBuffer(processed_value);
-
     }
 }
 
@@ -194,29 +180,6 @@ void Semg::startSamplingTimer() {
     //ESP_LOGE(TAG_SEMG, "Aquiiiiiiiiiii!");
 }
 
-void Semg::startStreamingSamplingTimer(float period_ms) {
-	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
-    if (samplingTimer == NULL) {
-        samplingTimer = xTimerCreate(
-            "sEMG timer",           // Nome do temporizador (para fins de depuração)
-            pdMS_TO_TICKS(period_ms),  // Período em milissegundos
-            pdTRUE,              // Modo autoreload, o temporizador será recarregado automaticamente
-            (void *)0,           // ID do temporizador (pode ser usado para identificação adicional)
-            Semg::samplingCallback        // Função a ser chamada quando o temporizador expirar
-        );
-   }
-
-    // Verificação se o temporizador foi criado com sucesso
-    if (samplingTimer != NULL) {
-       if ( xTimerStart(samplingTimer, 0) != pdPASS) {
-            ESP_LOGE(TAG_SEMG, "Restarting sEmg timer!");
-       }
-		//ESP_LOGI(TAG_SEMG, "Sampling timer started");
-    } else {
-		ESP_LOGE(TAG_SEMG, "Error creating sEmg timer!");
-    }
-    //ESP_LOGE(TAG_SEMG, "Aquiiiiiiiiiii!");
-}
 
 void Semg::sensorTask(void * obj) {
 	while(true) {
@@ -330,98 +293,71 @@ void Semg::disableSensor() {
 // STREAMING IMPLEMENTATION
 // ============================================================================
 
-void Semg::configureStreaming(int rate, const char* type_str) {
-	ESP_LOGI(TAG_SEMG, "Configuring streaming: rate=%d Hz, type=%s", rate, type_str);
+/**
+ * @brief Convert float voltage to int16_t for binary protocol
+ *
+ * Maps ADC range (0-4.096V) to ±4096 integer range
+ * Preserves millivolt precision: 1 LSB = 1 mV
+ *
+ * @param value ADC voltage in volts
+ * @return int16_t value clamped to ±4096 range
+ */
+int16_t Semg::floatToInt16(float value) {
+    // Clamp to valid range
+    if (value > VALUE_RANGE_MAX) value = VALUE_RANGE_MAX;
+    if (value < VALUE_RANGE_MIN) value = VALUE_RANGE_MIN;
 
-    streaming_config.rate = rate;
-
-    // Parse type string
-    if (strcmp(type_str, "raw") == 0) {
-        streaming_config.type = STREAMING_RAW;
-    } else if (strcmp(type_str, "filtered") == 0) {
-        streaming_config.type = STREAMING_FILTERED;
-
-        // ✅ Configure filter ONCE when streaming is configured
-        float sampling_time_ms = 1000.0f / (float)rate;
-        SemgFilter::updateSamplingRate(sampling_time_ms, 10, 50, false);
-
-        // ✅ Reset filter state to prevent oscillation
-        SemgFilter::resetState();
-
-        ESP_LOGI(TAG_SEMG, "Updated filter: %.2f ms period, 10-50 Hz bandpass + 60 Hz notch (sample rate: %.1f Hz)",
-                 sampling_time_ms, 1000.0f / sampling_time_ms);
-
-    } else if (strcmp(type_str, "rms") == 0) {
-        streaming_config.type = STREAMING_RMS;
-    } else {
-        streaming_config.type = STREAMING_RAW; // Default
-		ESP_LOGW(TAG_SEMG, "Unknown streaming type '%s', defaulting to 'raw'", type_str);
-    }
-
-    // Calculate packets per second based on rate and samples per packet
-    streaming_config.samples_per_packet = 10 ;
-    streaming_config.packets_per_second = rate / streaming_config.samples_per_packet;
-
-	ESP_LOGI(TAG_SEMG, "Streaming config: %d samples/packet, %d packets/second",
-             streaming_config.samples_per_packet, streaming_config.packets_per_second);
+    return (int16_t)value;
 }
 
-void Semg::enableStreaming() {
-	ESP_LOGI(TAG_SEMG, "Enabling streaming...");
-	ESP_LOGI(TAG_SEMG, "Current config: rate=%d Hz, type=%d, samples/pkt=%d, pkts/sec=%d",
-             streaming_config.rate,
-             streaming_config.type,
-             streaming_config.samples_per_packet,
-             streaming_config.packets_per_second);
 
-    // Reset buffer indices
+void Semg::enableStreaming() {
+	ESP_LOGI(TAG_SEMG, "Enabling streaming @ fixed %d Hz", SEMG_FIXED_RATE_HZ);
+
+    // Reset buffer
     buffer_write_index = 0;
     buffer_read_index = 0;
     streaming_active = true;
     streaming_start_time = millis();
 
-	ESP_LOGI(TAG_SEMG, "Buffer reset: write_index=%d, read_index=%d",
-             buffer_write_index, buffer_read_index);
+    // Configure Butterworth filter for 215 Hz sampling
+    // Period: 1000ms / 215Hz = 4.65ms
+    float sampling_time_ms = 1000.0f / SEMG_FIXED_RATE_HZ;
+    SemgFilter::updateSamplingRate(sampling_time_ms, 10, 50, false);
+    SemgFilter::resetState();
 
-    // Start sampling timer at configured streaming rate
-    // For 20Hz streaming: period = 1000ms / 20Hz = 50ms
-    float streaming_period_ms = 1000.0f / streaming_config.rate;
-    Semg::startStreamingSamplingTimer(streaming_period_ms);
+	ESP_LOGI(TAG_SEMG, "Filter configured: %.2f ms period (10-50 Hz bandpass + 60 Hz notch)", sampling_time_ms);
 
-	ESP_LOGI(TAG_SEMG, "Sampling timer started (period=%.2f ms, rate=%d Hz)",
-             streaming_period_ms, streaming_config.rate);
+    // Start ADC continuous mode (860 Hz → 215 Hz with 4x downsample)
+    Adc::startContinuousMode(SEMG_ADC_PIN);
 
-    // Check available heap before creating task
-    ESP_LOGI(TAG_SEMG, "Free heap before task creation: %d bytes", esp_get_free_heap_size());
-
-    // Create streaming task
-    ESP_LOGI(TAG_SEMG, "Creating streaming task...");
+    // Create streaming task on Core 1
     BaseType_t result = xTaskCreatePinnedToCore(
         Semg::streamingTask,
         "sEMG Streaming",
         4096,
         NULL,
-        15, // Priority between MessageHandler (20) and other tasks
+        15,  // Priority (higher than most, lower than MessageHandler)
         &streaming_task_handle,
-        1   // Core 1 (same as MessageHandler)
+        1    // Core 1
     );
 
-	ESP_LOGI(TAG_SEMG, "xTaskCreatePinnedToCore returned: %d (pdPASS=%d)", result, pdPASS);
-
     if (result == pdPASS) {
-		ESP_LOGI(TAG_SEMG, "Streaming task created successfully, handle=%p", streaming_task_handle);
+		ESP_LOGI(TAG_SEMG, "Streaming enabled successfully (%d Hz, Butterworth filtered)", SEMG_FIXED_RATE_HZ);
     } else {
-		ESP_LOGE(TAG_SEMG, "Failed to create streaming task, error code: %d", result);
+		ESP_LOGE(TAG_SEMG, "Failed to create streaming task (error: %d)", result);
         streaming_active = false;
+        Adc::stopContinuousMode();
     }
-
-	ESP_LOGI(TAG_SEMG, "enableStreaming() finished");
 }
 
 void Semg::disableStreaming() {
 	ESP_LOGI(TAG_SEMG, "Disabling streaming...");
 
     streaming_active = false;
+
+    // Stop ADC continuous mode
+    Adc::stopContinuousMode();
 
     // Delete streaming task if it exists
     if (streaming_task_handle != NULL) {
@@ -451,7 +387,7 @@ int Semg::getAvailableSamples() {
     }
 }
 
-void Semg::readStreamingSamples(float* output, int count) {
+void Semg::readStreamingSamples(int16_t* output, int count) {
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     for (int i = 0; i < count; i++) {
         portENTER_CRITICAL(&mux);
@@ -461,7 +397,7 @@ void Semg::readStreamingSamples(float* output, int count) {
     }
 }
 
-void Semg::writeToBuffer(float value) {
+void Semg::writeToBuffer(int16_t value) {
     portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
     portENTER_CRITICAL_ISR(&mux);
 
@@ -484,65 +420,51 @@ void Semg::writeToBuffer(float value) {
     portEXIT_CRITICAL_ISR(&mux);
 }
 
-float Semg::applyStreamingFilter(float value) {
-    switch (streaming_config.type) {
-        case STREAMING_RAW:
-            return value;
 
-        case STREAMING_FILTERED: {
-            // Use bandpass + notch filter to remove 60 Hz interference
-            return SemgFilter::filter(value);
-        }
+/**
+ * @brief Send streaming data via BINARY protocol (NEW - Option B)
+ *
+ * Packet Structure:
+ *   Header (8 bytes): magic | code | timestamp | sample_count
+ *   Data (100 bytes): int16_t[50]
+ *   Total: 108 bytes (vs 282 bytes JSON = 72% reduction)
+ *
+ * @param samples Array of int16_t values
+ * @param count Number of samples
+ * @return true if sent successfully
+ */
+bool Semg::sendBinaryStreamingMessage(int16_t* samples, int count) {
+    // Calculate packet size
+    const int packet_size = sizeof(BinaryPacketHeader) + (count * sizeof(int16_t));
 
-        case STREAMING_RMS:
-            return fabs(value);
+    // Allocate buffer on stack (108 bytes max)
+    uint8_t buffer[MAX_BINARY_PACKET_SIZE];
 
-        default:
-            return value;
-    }
-}
+    // Build header
+    BinaryPacketHeader* header = (BinaryPacketHeader*)buffer;
+    header->magic = PACKET_MAGIC_BYTE;
+    header->message_code = PACKET_MESSAGE_CODE_STREAM_DATA;
+    header->timestamp = millis();
+    header->sample_count = count;
 
-bool Semg::sendStreamingMessage(float* samples, int count) {
-    // Create JSON document
-    DynamicJsonDocument *message_document = new DynamicJsonDocument(JSON_BUFFER_SIZE);
+    // Copy data payload
+    memcpy(buffer + sizeof(BinaryPacketHeader), samples, count * sizeof(int16_t));
 
-    (*message_document)[MESSAGE_KEYS::CODE] = SEMG_STREAMING::STREAM_DATA;
-    // Removed "mt" field - redundant for streaming (always "w")
-    // Saves 9 bytes per packet: 98→89 bytes
-
-    JsonObject body = (*message_document).createNestedObject(MESSAGE_KEYS::BODY);
-    body[MESSAGE_KEYS::streaming::TIMESTAMP] = millis();
-
-    JsonArray values_array = body.createNestedArray(MESSAGE_KEYS::streaming::VALUES);
-    for (int i = 0; i < count; i++) {
-        // Round to 1 decimal place to save bandwidth
-        float rounded_value = roundf(samples[i] * 10.0f) / 10.0f;
-        values_array.add(rounded_value);
-
-    }
-
-    // Send via MessageHandler - return success/fail
-    return MessageHandler::sendMessage(message_document);
+    // Send raw binary data via Bluetooth
+    return Bluetooth::sendRawData(buffer, packet_size);
 }
 
 void Semg::streamingTask(void* parameters) {
-	ESP_LOGI(TAG_SEMG, "Streaming task started");
-	ESP_LOGI(TAG_SEMG, "Config: %d samples/pkt, %d pkts/sec, interval: %d ms",
-             streaming_config.samples_per_packet,
-             streaming_config.packets_per_second,
-             1000 / streaming_config.packets_per_second);
+	ESP_LOGI(TAG_SEMG, "Streaming task started (FIXED %d Hz, BINARY PROTOCOL)", SEMG_FIXED_RATE_HZ);
+	ESP_LOGI(TAG_SEMG, "Config: %d samples/pkt, ~%d pkts/sec",
+             SEMG_SAMPLES_PER_PACKET, SEMG_PACKETS_PER_SECOND);
 
-    float samples[MAX_SAMPLES_PER_PACKET];
+    int16_t samples[SEMG_SAMPLES_PER_PACKET];
     int packet_count = 0;
-    int loop_count = 0;
-    const int interval_ms = 1000 / streaming_config.packets_per_second;
-
-    // ✅ Filter already configured in configureStreaming() - no need to update here
+    unsigned long samples_processed = 0;
 
     while (streaming_active) {
-        loop_count++;
-
-        // Check timeout
+        // Check timeout (10 minutes)
         unsigned long elapsed_minutes = (millis() - streaming_start_time) / 60000;
         if (elapsed_minutes >= STREAMING_TIMEOUT_MINUTES) {
 			ESP_LOGW(TAG_SEMG, "Streaming timeout reached (%d minutes), stopping...", STREAMING_TIMEOUT_MINUTES);
@@ -550,22 +472,37 @@ void Semg::streamingTask(void* parameters) {
             break;
         }
 
-        // Check if enough samples are available
+        // Poll ADC for new averaged sample (215 Hz output from 860 Hz ADC)
+        if (Adc::hasNewSample()) {
+            // Get averaged sample (already downsampled 4x by ADC task)
+            int16_t raw_sample = Adc::getLastSample();
+
+            // Apply Butterworth filter (10-50 Hz bandpass + 60 Hz notch)
+            float filtered = SemgFilter::filter((float)raw_sample);
+
+            // Convert to int16_t and write to circular buffer
+            int16_t final_sample = floatToInt16(filtered);
+            writeToBuffer(final_sample);
+            samples_processed++;
+        }
+
+        // Check if enough samples are available for packet transmission
         int available = getAvailableSamples();
-
-        if (available >= streaming_config.samples_per_packet) {
+        if (available >= SEMG_SAMPLES_PER_PACKET) {
             // Read samples from buffer
-            if (loop_count <= 10) {
-                ESP_LOGI(TAG_SEMG, "Reading %d samples from buffer (available: %d)...",
-                         streaming_config.samples_per_packet, available);
-            }
-            readStreamingSamples(samples, streaming_config.samples_per_packet);
+            readStreamingSamples(samples, SEMG_SAMPLES_PER_PACKET);
 
-            //Send via Bluetooth
+            // Send via Bluetooth (binary protocol)
             if (Bluetooth::isConnected()) {
-                bool sent = sendStreamingMessage(samples, streaming_config.samples_per_packet);
+                bool sent = sendBinaryStreamingMessage(samples, SEMG_SAMPLES_PER_PACKET);
                 if (sent) {
                     packet_count++;
+
+                    // Periodic logging (every 50 packets)
+                    if (packet_count % 50 == 0) {
+                        ESP_LOGI(TAG_SEMG, "Streaming stats: %d packets sent, %lu samples processed",
+                                 packet_count, samples_processed);
+                    }
                 } else {
 					ESP_LOGW(TAG_SEMG, "Failed to send packet #%d, retrying next cycle", packet_count + 1);
                 }
@@ -574,15 +511,14 @@ void Semg::streamingTask(void* parameters) {
                 Semg::disableStreaming();
                 break;
             }
-        } else {
-            // Not enough samples yet - wait for next timer tick
-            vTaskDelay(pdMS_TO_TICKS(interval_ms));
         }
 
-
+        // Yield CPU (adaptive delay based on buffer fullness)
+        vTaskDelay(pdMS_TO_TICKS(available < 10 ? 10 : 1));
     }
 
-	ESP_LOGI(TAG_SEMG, "Streaming task finished (sent %d packets total)", packet_count);
+	ESP_LOGI(TAG_SEMG, "Streaming task finished (sent %d packets, processed %lu samples)",
+             packet_count, samples_processed);
     vTaskDelete(NULL);
 }
 

@@ -18,7 +18,6 @@ private:
     static void interpretMessage(String data);
     static void handleGyroscopeMessage(DynamicJsonDocument &message);
     static void handleSessionParametersMessage(DynamicJsonDocument &message);
-    static void handleStreamingConfigMessage(DynamicJsonDocument &message);
     static int getMessageCode(DynamicJsonDocument &message);
     static String getMessageMethod(DynamicJsonDocument &message);
     static void handleIncomingMessages();

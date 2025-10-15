@@ -407,11 +407,74 @@ For module testing without full system:
 - Rebuild and upload
 - Monitor serial output
 
-## Project Structure Notes
+## Project Structure
 
-- `src/modules/`: Each hardware/functional module is self-contained
-- `lib/libFilter/`: External filter library (git submodule)
-- `include/`: Currently unused (Arduino framework convention)
-- `test/`: Empty (no unit tests currently)
+```
+InteroperableResearchsEMGDevice/
+├── src/
+│   ├── main.cpp                    # Entry point with 215Hz streaming test
+│   ├── globals.h                   # Core assignments and mutexes
+│   └── modules/
+│       ├── adc/                    # ADS1115 ADC driver (860 SPS → 215 Hz)
+│       ├── semg/                   # sEMG processing + streaming
+│       │   ├── Semg.cpp            # Main implementation
+│       │   ├── Semg.h              # API definitions
+│       │   └── StreamingProtocol.h # Binary protocol header
+│       ├── SemgFilter/             # Butterworth filters
+│       ├── fes/                    # FES stimulation control
+│       ├── session/                # Session state machine
+│       ├── message_handler/        # Bluetooth command router
+│       ├── bluetooth/              # UART2 communication
+│       ├── gyroscope/              # MPU6050 driver
+│       ├── potentiometer/          # Digital potentiometer control
+│       ├── battery_monitor/        # Battery voltage monitoring
+│       ├── led/                    # LED indicators
+│       └── debug/                  # Debug utilities
+│
+├── lib/
+│   └── libFilter/                  # External filter library (git submodule)
+│
+├── docs/                           # 📚 Documentation (organized structure)
+│   ├── README.md                   # Documentation index
+│   ├── api/                        # Protocol specifications
+│   │   ├── bluetooth-protocol.md   # Binary streaming protocol
+│   │   └── streaming-protocol.md   # 215Hz streaming quick reference
+│   ├── architecture/               # System design
+│   │   └── streaming-architecture.md # Flowcharts and diagrams
+│   ├── development/                # Technical notes
+│   │   ├── adc-analysis.md         # ADC performance analysis
+│   │   ├── continuous-mode.md      # Implementation plan
+│   │   └── bugfixes.md             # Bug fix documentation
+│   └── guides/                     # User documentation
+│       └── data-capture.md         # Data capture guide
+│
+├── platformio.ini                  # Build configuration
+├── CLAUDE.md                       # This file - AI assistant guidance
+├── README.md                       # Project overview
+├── CHANGELOG.md                    # Version history
+├── capture_semg_data.py            # Python data capture utility
+├── requirements.txt                # Python dependencies
+└── .gitignore                      # Excludes CSV data files
+
+```
+
+**Note**: `include/` and `test/` directories exist but are currently unused.
+
+## Documentation
+
+All project documentation is organized in the `docs/` folder:
+
+- **API Documentation** (`docs/api/`): Bluetooth protocol specifications
+- **Architecture** (`docs/architecture/`): System design and data flow diagrams
+- **Development Notes** (`docs/development/`): Technical analysis and implementation details
+- **User Guides** (`docs/guides/`): End-user documentation for data capture
+
+See `docs/README.md` for the complete documentation index.
+
+**Key Documentation Files**:
+- `docs/api/bluetooth-protocol.md` - Binary streaming protocol (v1.0)
+- `docs/api/streaming-protocol.md` - 215Hz streaming quick reference
+- `docs/guides/data-capture.md` - Guide for capturing sEMG data
+- `CHANGELOG.md` - Version history and recent changes
 
 All module headers define TAG constants for logging (e.g., `TAG_FES`, `TAG_SEMG`). Use `ESP_LOGI(TAG_*, ...)` for consistent log formatting.

@@ -35,14 +35,11 @@ void Semg::init() {
     pinMode(SEMG_ENABLE_PIN, OUTPUT);
     Semg::enableSensor();
 
-    //Semg::disableSensor();
 	LED_TRIGGER.set(false);
     Semg::createLedTriggerTimer();
 }
 void Semg::startLedTrigger(){
-    //turn on led
     LED_TRIGGER.set(true);
-    //start o timer
     xTimerStart(Semg::ledTriggerTimer, 0);
 }
 
@@ -86,13 +83,8 @@ bool Semg::isTrigger() {
 
 	if (trigger) {
 		ESP_LOGI(TAG_SEMG, "==== Trigger detected ====");
-		//vTaskSuspend(MessageHandler::task_handle);
         Semg::sendTriggerMessage();
         Semg::startLedTrigger();
-        //Gyroscope::sendLastValue();
-        //vTaskResume(MessageHandler::task_handle);
-        //LED_TRIGGER.set(true);
-		//LED_TRIGGER.turnOnFor(2000);
 	}
     return trigger;
 }
@@ -213,7 +205,6 @@ float Semg::getFilteredSample() {
 	
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
 		filtered_value[i] = raw_value[i];
-        //Serial.println(filtered_value[i]);
 	}
 
 	
@@ -252,9 +243,7 @@ float Semg::acquireAverage(int readings_amount) {
     }
     
     Semg::output /= (float)readings_amount;
-    //Serial.print("output>");
-    //Serial.println(Semg::output);
-    
+
     return Semg::output;
 }
 

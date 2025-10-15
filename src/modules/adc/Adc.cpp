@@ -18,29 +18,15 @@ volatile int Adc::available_samples = 0;
 TaskHandle_t Adc::adc_task_handle = NULL;
 
 void Adc::init() {
-	Serial.println("[ADC] Initializing ADS1115...");
-	ESP_LOGI(TAG_ADC, "Initializing ADS1115...");
-
 #if ADC_MODULE_ENABLE
     if (!Adc::ads.begin()) {
-		Serial.println("[ADC] ERROR: Failed to initialize ADS1115!");
 		ESP_LOGE(TAG_ADC, "Failed to initialize ADS1115");
         Adc::error = true;
         while (1) {};
     }
 
-    Serial.println("[ADC] ADS1115 begin() succeeded");
-
     // IMPORTANT: Set data rate AFTER begin() to prevent reset
     Adc::ads.setDataRate(RATE_ADS1115_860SPS);
-    Serial.printf("[ADC] setDataRate(RATE_ADS1115_860SPS) called (value: %d)\n", RATE_ADS1115_860SPS);
-
-    // Verify by reading back (if library supports it)
-    uint16_t config = Adc::ads.getGain(); // Just to test I2C works
-    Serial.printf("[ADC] I2C communication test - gain read: %d\n", config);
-
-	Serial.println("[ADC] ADS1115 configured for 860 SPS");
-	ESP_LOGI(TAG_ADC, "ADS1115 initialized @ 860 SPS");
 #else
 	ESP_LOGW(TAG_ADC, "ADC module disabled (ADC_MODULE_ENABLE=false)");
 #endif
@@ -60,11 +46,6 @@ float Adc::getValue(int input) {
 // NEW: Start continuous mode with downsample
 void Adc::startContinuousMode(int channel) {
 #if ADC_MODULE_ENABLE
-	Serial.printf("[ADC] Starting continuous mode on channel %d (860 Hz → %d Hz)\n",
-             channel, ADC_FIXED_RATE_HZ);
-	ESP_LOGI(TAG_ADC, "Starting continuous mode on channel %d (860 Hz → %d Hz)",
-             channel, ADC_FIXED_RATE_HZ);
-
     // Reset downsample buffer
     downsample_index = 0;
 
@@ -72,8 +53,6 @@ void Adc::startContinuousMode(int channel) {
     write_index = 0;
     read_index = 0;
     available_samples = 0;
-    Serial.printf("[ADC] Circular buffer reset: write=%d, read=%d, available=%d\n",
-                  write_index, read_index, available_samples);
 
     // Create ADC task on Core 1 (communication core)
     // Pass channel as parameter
@@ -87,15 +66,10 @@ void Adc::startContinuousMode(int channel) {
         1                      // Core 1
     );
 
-    if (result == pdPASS) {
-		Serial.println("[ADC] Task created successfully");
-		ESP_LOGI(TAG_ADC, "Continuous mode started successfully");
-    } else {
-		Serial.printf("[ADC] ERROR: Failed to create task (error: %d)\n", result);
+    if (result != pdPASS) {
 		ESP_LOGE(TAG_ADC, "Failed to create ADC task (error: %d)", result);
     }
 #else
-	Serial.println("[ADC] WARNING: ADC module disabled");
 	ESP_LOGW(TAG_ADC, "ADC module disabled");
 #endif
 }
@@ -148,8 +122,6 @@ int16_t Adc::getLastSample() {
 void Adc::adcTaskLoop(void* parameters) {
 #if ADC_MODULE_ENABLE
 	int channel = (int)(long)parameters;
-	Serial.printf("[ADC] Task loop started! Channel=%d, Downsample=%d:1\n", channel, ADC_DOWNSAMPLE_RATIO);
-	ESP_LOGI(TAG_ADC, "ADC task loop started (downsample %d:1)", ADC_DOWNSAMPLE_RATIO);
 
     unsigned long samples_collected = 0;
     unsigned long last_log_time = millis();
@@ -161,7 +133,6 @@ void Adc::adcTaskLoop(void* parameters) {
     unsigned long max_read_time_us = 0;
 
     // Start continuous conversion mode (only once)
-    Serial.printf("[ADC] Starting continuous conversion on channel %d\n", channel);
     ads.startADCReading(channel, false);  // false = continuous mode
     delay(2);  // Wait for first conversion
 
@@ -214,42 +185,11 @@ void Adc::adcTaskLoop(void* parameters) {
 
             portEXIT_CRITICAL(&mux);
 
-            // Debug: Print first 5 samples
-            if (samples_written_to_buffer <= 5) {
-                Serial.printf("[ADC] Sample #%d written: %d (buffer: %d/%d)\n",
-                              samples_written_to_buffer, averaged, available_samples, ADC_CIRCULAR_BUFFER_SIZE);
-            }
-
             // Reset downsample buffer
             downsample_index = 0;
         }
 
-        // Periodic stats logging (every 10 seconds)
-        if (millis() - last_log_time > 10000) {
-            portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
-            portENTER_CRITICAL(&mux);
-            int buffered = available_samples;
-            portEXIT_CRITICAL(&mux);
-
-            // Calculate timing stats
-            unsigned long avg_read_time_us = (samples_collected > 0) ?
-                (total_read_time_us / samples_collected) : 0;
-
-            Serial.printf("[ADC] Stats: %lu samples/10s (%lu Hz), buffer: %d/%d\n",
-                         samples_collected, samples_collected / 10, buffered, ADC_CIRCULAR_BUFFER_SIZE);
-            Serial.printf("[ADC] Timing: avg=%lu us, min=%lu us, max=%lu us per read\n",
-                         avg_read_time_us, min_read_time_us, max_read_time_us);
-            Serial.printf("[ADC] Expected @ 860 SPS: 1163 us/sample\n");
-
-            ESP_LOGI(TAG_ADC, "ADC stats: %lu samples/10s (avg rate: %lu Hz), buffer: %d/%d",
-                     samples_collected, samples_collected / 10, buffered, ADC_CIRCULAR_BUFFER_SIZE);
-
-            samples_collected = 0;
-            total_read_time_us = 0;
-            min_read_time_us = 999999;
-            max_read_time_us = 0;
-            last_log_time = millis();
-        }
+        // Periodic stats logging removed for clean serial output
 
         // No delay - run as fast as ADC allows (~860 Hz)
     }

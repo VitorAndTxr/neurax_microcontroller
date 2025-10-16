@@ -4,7 +4,7 @@ const float SemgFilter::low_cuttoff_frequency = SEMG_FILTER_LOW_CUTOFF_FREQUENCY
 
 const float SemgFilter::high_cuttoff_frequency = SEMG_FILTER_HIGH_CUTOFF_FREQUENCY;
 
-const float SemgFilter::sampling_time = 1000.0f / 215.0f;
+const float SemgFilter::sampling_time = 1000.0f / 215.0f;  // 4.651 ms for 215 Hz
 
 const IIR::ORDER SemgFilter::order = IIR::ORDER::OD3; // Butterworth - Oder (OD1 to OD4)
 const IIR::TYPE SemgFilter::filter_type_high_pass = IIR::TYPE::HIGHPASS;
@@ -30,7 +30,8 @@ float SemgFilter::filter(float value)
 {
     value = SemgFilter::low_pass.filterIn(value);
     value = SemgFilter::high_pass.filterIn(value);
-    value = value * 2;
+    // Scale by 10 instead of 100 to avoid overflow (ADC range: -32768 to 32767)
+    value = value * 10.0f;
     return value;
 }
 

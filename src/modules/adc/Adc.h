@@ -18,7 +18,7 @@ private:
     static Adafruit_ADS1115 ads;
     static bool error;
 
-    // Continuous mode variables
+    // Continuous mode variables (averaging: average 4 samples)
     static int16_t downsample_buffer[ADC_DOWNSAMPLE_RATIO];
     static volatile int downsample_index;
 

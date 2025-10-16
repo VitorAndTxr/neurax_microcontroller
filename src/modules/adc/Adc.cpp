@@ -5,7 +5,7 @@ const int Adc::adc_i2c_address = ADC_I2C_ADDR; // already set in lib
 bool Adc::error = false;
 Adafruit_ADS1115 Adc::ads;
 
-// Continuous mode variables
+// Continuous mode variables (averaging buffer)
 int16_t Adc::downsample_buffer[ADC_DOWNSAMPLE_RATIO] = {0};
 volatile int Adc::downsample_index = 0;
 
@@ -43,10 +43,10 @@ float Adc::getValue(int input) {
 #endif
 }
 
-// NEW: Start continuous mode with downsample
+// NEW: Start continuous mode with decimation (1 of 4 samples)
 void Adc::startContinuousMode(int channel) {
 #if ADC_MODULE_ENABLE
-    // Reset downsample buffer
+    // Reset decimation counter
     downsample_index = 0;
 
     // Reset circular buffer
@@ -132,9 +132,18 @@ void Adc::adcTaskLoop(void* parameters) {
     unsigned long min_read_time_us = 999999;
     unsigned long max_read_time_us = 0;
 
-    // Start continuous conversion mode (only once)
-    ads.startADCReading(channel, false);  // false = continuous mode
+    // Convert channel number (0-3) to MUX config for single-ended mode
+    // ADS1X15_REG_CONFIG_MUX_SINGLE_0 = 0x4000, _1 = 0x5000, _2 = 0x6000, _3 = 0x7000
+    uint16_t mux_config = 0x4000 + (channel << 12);  // 0x4000 + (channel * 0x1000)
+
+    // Start continuous conversion mode in single-ended mode
+    ads.startADCReading(mux_config, true);  // true = continuous mode
     delay(2);  // Wait for first conversion
+
+    ESP_LOGI(TAG_ADC, "Continuous mode started on channel %d", channel);
+
+    // Debug: Print first 10 raw readings to verify ADC is working
+    unsigned long debug_samples = 0;
 
     while (true) {
         // Measure ADC read time
@@ -144,6 +153,13 @@ void Adc::adcTaskLoop(void* parameters) {
         int16_t raw_value = ads.getLastConversionResults();
 
         unsigned long read_duration = micros() - read_start;
+
+        // Debug: Print first 10 readings
+        if (debug_samples < 10) {
+            Serial.printf("[ADC] Sample #%lu: raw=%d (%.4fV), read_time=%lu us\n",
+                          debug_samples + 1, raw_value, raw_value * 0.0001875f, read_duration);
+            debug_samples++;
+        }
 
         // Track timing stats
         total_read_time_us += read_duration;
@@ -157,18 +173,18 @@ void Adc::adcTaskLoop(void* parameters) {
             delayMicroseconds(delay_us);
         }
 
-        // Add to downsample buffer
-        downsample_buffer[downsample_index++] = raw_value;
+        // Downsample: average 4 samples (860Hz ÷ 4 = 215Hz)
+        downsample_buffer[downsample_index] = raw_value;
+        downsample_index++;
         samples_collected++;
 
-        // When buffer full, compute average (860Hz ÷ 4 = 215Hz)
         if (downsample_index >= ADC_DOWNSAMPLE_RATIO) {
-            // Average 4 samples for anti-aliasing
+            // Calculate average of 4 samples (anti-aliasing filter)
             int32_t sum = 0;
             for (int i = 0; i < ADC_DOWNSAMPLE_RATIO; i++) {
                 sum += downsample_buffer[i];
             }
-            int16_t averaged = sum / ADC_DOWNSAMPLE_RATIO;
+            int16_t averaged_value = sum / ADC_DOWNSAMPLE_RATIO;
 
             // Write to circular buffer atomically
             portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
@@ -176,16 +192,22 @@ void Adc::adcTaskLoop(void* parameters) {
 
             // Only write if buffer not full
             if (available_samples < ADC_CIRCULAR_BUFFER_SIZE) {
-                circular_buffer[write_index] = averaged;
+                circular_buffer[write_index] = averaged_value;
                 write_index = (write_index + 1) % ADC_CIRCULAR_BUFFER_SIZE;
                 available_samples++;
                 samples_written_to_buffer++;
+
+                // Debug: Print first 5 averaged values written to buffer
+                if (samples_written_to_buffer <= 5) {
+                    Serial.printf("[ADC] Averaged #%d written to buffer: %d (avg of 4 samples)\n",
+                                  samples_written_to_buffer, averaged_value);
+                }
             }
             // Note: If buffer full, sample is dropped (overflow protection)
 
             portEXIT_CRITICAL(&mux);
 
-            // Reset downsample buffer
+            // Reset downsample counter
             downsample_index = 0;
         }
 

@@ -101,6 +101,31 @@ pio run --target upload && pio device monitor
 
 **Important:** Per project policy, firmware compilation and upload must be done manually by the user.
 
+## 🧪 Testing Bluetooth Streaming
+
+### **Automatic Test (Recommended)**
+
+```bash
+# Install dependencies (simple!)
+pip install pyserial matplotlib numpy scipy
+
+# Pair device in Bluetooth settings (one-time)
+# Windows: Settings → Bluetooth → Add "NeuroEstimulator"
+# Linux: bluetoothctl → pair & connect
+
+# Run automatic capture (auto-detects port, captures 10s)
+python capture_bluetooth_simple.py
+```
+
+### **What it does:**
+- ✅ Auto-detects "NeuroEstimulator" COM port
+- ✅ Connects via Bluetooth (serial SPP)
+- ✅ Captures 10 seconds @ 215 Hz
+- ✅ Generates plots + CSV
+- ✅ Disconnects automatically
+
+**For detailed instructions**, see: **[BLUETOOTH_TEST_GUIDE.md](./BLUETOOTH_TEST_GUIDE.md)**
+
 ## 📚 Documentation
 
 Comprehensive documentation is available in the [`docs/`](./docs/) directory:

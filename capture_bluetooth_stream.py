@@ -39,7 +39,7 @@ CAPTURE_DURATION = 10  # seconds
 EXPECTED_SAMPLES = SAMPLING_RATE * CAPTURE_DURATION
 
 # Serial configuration
-BAUD_RATE = 115200
+BAUD_RATE = 9600  # HC-05/HC-06 default baud rate
 TIMEOUT = 2.0  # seconds
 
 # ============================================================================
@@ -198,6 +198,19 @@ def capture_stream(port, duration=CAPTURE_DURATION):
 
     # Send start command
     send_start_command(ser)
+
+    # Wait for JSON ACK response
+    time.sleep(0.5)
+    if ser.in_waiting > 0:
+        ack_data = ser.read(ser.in_waiting)
+        try:
+            ack_str = ack_data.decode('ascii', errors='ignore').strip()
+            if '{"cd":11,"mt":"a"}' in ack_str:
+                print("[ACK] Streaming started")
+            else:
+                print(f"[WARN] Unexpected ACK: {ack_str}")
+        except:
+            print("[WARN] Non-ASCII ACK received")
 
     # Initialize parser
     parser = BinaryPacketParser()

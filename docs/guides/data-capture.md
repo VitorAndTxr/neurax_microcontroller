@@ -2,7 +2,35 @@
 
 Quick guide for capturing and analyzing 215 Hz sEMG data from the ESP32 device.
 
-## Setup
+---
+
+## 🚀 Quick Start: Automatic Bluetooth Capture (Recommended)
+
+### **Option 1: Fully Automatic (Best for Testing)**
+
+```bash
+# Install dependencies
+pip install pybluez-win10 matplotlib numpy scipy  # Windows
+pip install pybluez matplotlib numpy scipy        # Linux/Mac
+
+# Run automatic capture
+python capture_bluetooth_auto.py
+```
+
+**What it does:**
+- ✅ Auto-discovers "NeuroEstimulator" device
+- ✅ Connects via native Bluetooth
+- ✅ Captures 10 seconds @ 215 Hz
+- ✅ Generates plots + CSV
+- ✅ Disconnects automatically
+
+**For detailed Bluetooth testing instructions**, see: **[../../BLUETOOTH_TEST_GUIDE.md](../../BLUETOOTH_TEST_GUIDE.md)**
+
+---
+
+## 📋 Manual Capture Methods
+
+### **Option 2: Serial Monitor Capture**
 
 1. **Install Python dependencies**:
 ```bash

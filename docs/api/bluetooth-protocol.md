@@ -48,7 +48,7 @@ The **Binary Streaming Protocol** replaces the previous JSON-based streaming to 
 
 ```
 Mobile App → ESP32: {"cd":11,"mt":"x"}                                   (Start)
-ESP32 → App:        {"cd":11,"mt":"a"}                                   (ACK)
+ESP32 → App:        {"cd":11,"mt":"a"}                                   (JSON ACK)
 
 ESP32 → App:        [Binary Packet 1] (108 bytes)
 ESP32 → App:        [Binary Packet 2] (108 bytes)
@@ -56,8 +56,39 @@ ESP32 → App:        [Binary Packet 3] (108 bytes)
 ...                 (~4.3 packets/second @ 215 Hz)
 
 Mobile App → ESP32: {"cd":12,"mt":"x"}                                   (Stop)
-ESP32 → App:        {"cd":12,"mt":"a"}                                   (ACK)
+ESP32 → App:        {"cd":12,"mt":"a"}                                   (JSON ACK)
 ```
+
+**⚠️ IMPORTANT: Mixed Protocol Handling**
+
+The ESP32 sends a **JSON acknowledgment** before switching to binary mode:
+1. After sending `{"cd":11,"mt":"x"}`, wait 100-500ms
+2. Read and parse **JSON ACK**: `{"cd":11,"mt":"a"}`
+3. **Then** switch to binary packet parsing mode
+
+**Example Python code**:
+```python
+# Send START command
+ser.write(b'{"cd":11,"mt":"x"}\0')
+time.sleep(0.5)
+
+# Read JSON ACK (ASCII text)
+if ser.in_waiting > 0:
+    ack_data = ser.read(ser.in_waiting)
+    ack_str = ack_data.decode('ascii').strip()
+    if '{"cd":11,"mt":"a"}' in ack_str:
+        print("✅ Streaming will start now")
+
+# NOW expect binary packets (magic byte 0xAA)
+while streaming:
+    data = ser.read(ser.in_waiting)
+    packets = decoder.feed(data)  # Binary parsing
+```
+
+Failure to handle this ACK will cause:
+- Binary parser to fail (trying to parse JSON as binary)
+- Buffer desynchronization
+- No data captured
 
 ### Fixed Configuration
 

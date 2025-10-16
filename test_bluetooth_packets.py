@@ -10,7 +10,7 @@ import time
 import sys
 
 # Configuration
-BAUD_RATE = 115200
+BAUD_RATE = 9600  # HC-05/HC-06 default
 MAGIC_BYTE = 0xAA
 STREAM_DATA_CODE = 0x0D
 

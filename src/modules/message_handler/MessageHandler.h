@@ -21,6 +21,7 @@ private:
     static int getMessageCode(DynamicJsonDocument &message);
     static String getMessageMethod(DynamicJsonDocument &message);
     static void handleIncomingMessages();
+    static void sendAck(int message_code);
 public:
     static TaskHandle_t task_handle;
     MessageHandler() = delete;
@@ -28,7 +29,7 @@ public:
     static void init();
     static void start();
     static void loop(void * parameters);
-    static void sendMessage(DynamicJsonDocument* message);
+    static bool sendMessage(DynamicJsonDocument* message);
 };
 
 #endif

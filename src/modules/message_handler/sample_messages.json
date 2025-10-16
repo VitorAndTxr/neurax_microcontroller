@@ -1,45 +1,158 @@
-[
-    {
-        "cd": 1,
-        "mt": "r"
+{
+  "description": "Sample Bluetooth JSON messages for NeuroEstimulator firmware testing",
+
+  "gyroscope": {
+    "read_last_value": {
+      "cd": 1,
+      "mt": "r"
     },
-    {
-        "cd": 1,
-        "mt": "x"
-    },
-    {
-        "cd": 2,
-        "mt": "x"
-    },
-    {
-        "cd": 3,
-        "mt": "x"
-    },
-    {
-        "cd": 4,
-        "mt": "x"
-    },
-    {
-        "cd": 5,
-        "mt": "x"
-    },
-    {
-        "cd": 6,
-        "mt": "x"
-    },
-    {
-        "cd": 7,
-        "mt": "w",
-        "bd": {
-          "a": 3.0, 
-          "f": 38.0, 
-          "pw": 12.0, 
-          "df": 5, 
-          "pd": 5
-        }
-    },
-    {
-        "cd": 9,
-        "mt": "x"
+    "execute_and_read": {
+      "cd": 1,
+      "mt": "x"
     }
-]
+  },
+
+  "session": {
+    "start": {
+      "cd": 2,
+      "mt": "x"
+    },
+    "stop": {
+      "cd": 3,
+      "mt": "x"
+    },
+    "pause": {
+      "cd": 4,
+      "mt": "x"
+    },
+    "resume": {
+      "cd": 5,
+      "mt": "x"
+    },
+    "single_stimulus": {
+      "cd": 6,
+      "mt": "x"
+    },
+    "set_parameters": {
+      "cd": 7,
+      "mt": "w",
+      "bd": {
+        "a": 3.0,
+        "f": 38.0,
+        "pw": 12.0,
+        "df": 5,
+        "pd": 5
+      }
+    },
+    "description": {
+      "a": "Amplitude (V)",
+      "f": "Frequency (Hz)",
+      "pw": "Pulse width (μs)",
+      "df": "Difficulty (1-100)",
+      "pd": "Pulse duration (seconds)"
+    }
+  },
+
+  "semg": {
+    "trigger_test": {
+      "cd": 9,
+      "mt": "x"
+    }
+  },
+
+  "streaming": {
+    "config_20hz_raw": {
+      "cd": 14,
+      "mt": "w",
+      "bd": {
+        "rate": 20,
+        "type": "raw"
+      }
+    },
+    "config_30hz_filtered": {
+      "cd": 14,
+      "mt": "w",
+      "bd": {
+        "rate": 30,
+        "type": "filtered"
+      }
+    },
+    "config_100hz_filtered": {
+      "cd": 14,
+      "mt": "w",
+      "bd": {
+        "rate": 100,
+        "type": "filtered"
+      }
+    },
+    "config_200hz_rms": {
+      "cd": 14,
+      "mt": "w",
+      "bd": {
+        "rate": 200,
+        "type": "rms"
+      }
+    },
+    "start_streaming": {
+      "cd": 11,
+      "mt": "x"
+    },
+    "stop_streaming": {
+      "cd": 12,
+      "mt": "x"
+    },
+    "ack_example": {
+      "cd": 11,
+      "mt": "a",
+      "description": "ACK response sent by ESP32 to confirm command received"
+    },
+    "data_packet_example": {
+      "cd": 13,
+      "mt": "w",
+      "bd": {
+        "t": 12345,
+        "v": [23.4, 25.1, 22.8, 24.5, 26.2, 23.9, 25.7, 24.1, 22.5, 25.4]
+      }
+    },
+    "description": {
+      "rate": "Sampling rate in Hz (10-200)",
+      "type": "Data type: raw, filtered, or rms",
+      "t": "Timestamp in milliseconds",
+      "v": "Array of sEMG values",
+      "mt_a": "ACK (acknowledgment) - ESP32 confirms command received"
+    }
+  },
+
+  "test_sequences": {
+    "fes_session_full": [
+      "1. Set parameters: {\"cd\":7,\"mt\":\"w\",\"bd\":{\"a\":3.0,\"f\":38.0,\"pw\":12.0,\"df\":5,\"pd\":5}}",
+      "2. Start session: {\"cd\":2,\"mt\":\"x\"}",
+      "3. Wait for muscle activation and trigger",
+      "4. Stop session: {\"cd\":3,\"mt\":\"x\"}"
+    ],
+    "streaming_basic": [
+      "1. Configure (optional): {\"cd\":14,\"mt\":\"w\",\"bd\":{\"rate\":100,\"type\":\"filtered\"}}",
+      "2. Start: {\"cd\":11,\"mt\":\"x\"}",
+      "3. Receive data packets automatically",
+      "4. Stop: {\"cd\":12,\"mt\":\"x\"}"
+    ],
+    "streaming_comparison": [
+      "1. Config raw: {\"cd\":14,\"mt\":\"w\",\"bd\":{\"rate\":50,\"type\":\"raw\"}}",
+      "2. Start: {\"cd\":11,\"mt\":\"x\"}",
+      "3. Wait 5 seconds, Stop: {\"cd\":12,\"mt\":\"x\"}",
+      "4. Config filtered: {\"cd\":14,\"mt\":\"w\",\"bd\":{\"rate\":50,\"type\":\"filtered\"}}",
+      "5. Start: {\"cd\":11,\"mt\":\"x\"}",
+      "6. Wait 5 seconds, Stop: {\"cd\":12,\"mt\":\"x\"}"
+    ]
+  },
+
+  "notes": [
+    "All messages must be valid JSON without line breaks",
+    "Bluetooth baud rate: 9600",
+    "Monitor serial output at 115200 baud to see device logs",
+    "Streaming and FES sessions cannot run simultaneously (shared timer)",
+    "Streaming auto-stops after 10 minutes or if Bluetooth disconnects",
+    "ACK messages (mt: 'a') are automatically sent by ESP32 to confirm streaming commands (codes 11, 12, 14)",
+    "ACK format: {\"cd\":<command_code>,\"mt\":\"a\"} - same code as original command"
+  ]
+}

@@ -9,6 +9,7 @@
 #include "../message_handler/MessageHandler.h"
 #include "../../globals.h"
 #include "../led/Led.h"
+#include "StreamingProtocol.h"
 
 static const char* TAG_SEMG = "sEMG";
 
@@ -17,6 +18,11 @@ struct SemgParameters {
     static float difficulty;
     static float threshold;
 };
+
+// Fixed streaming configuration (no runtime changes)
+#define SEMG_FIXED_RATE_HZ 215
+#define SEMG_SAMPLES_PER_PACKET 50
+#define SEMG_PACKETS_PER_SECOND (SEMG_FIXED_RATE_HZ / SEMG_SAMPLES_PER_PACKET)  // ~4.3
 class Semg
 {
 private:
@@ -36,6 +42,18 @@ private:
     static float getFilteredSample();
 	static void filterSamplesArray();
 	static const float sampling_period_ms;
+
+    // Streaming private members - BINARY PROTOCOL (Fixed 215 Hz)
+    static int16_t streaming_buffer[STREAMING_BUFFER_SIZE];
+    static volatile int buffer_write_index;
+    static volatile int buffer_read_index;
+    static volatile bool streaming_active;
+    static TaskHandle_t streaming_task_handle;
+    static unsigned long streaming_start_time;
+
+    static void writeToBuffer(int16_t value);
+    static int16_t floatToInt16(float value);
+    static bool sendBinaryStreamingMessage(int16_t* samples, int count);
 
 public:
 	static volatile int sample_amount;
@@ -63,8 +81,16 @@ public:
     static void startLedTrigger();
     static void createLedTriggerTimer();
 	static void setDifficulty(int difficulty);
-	static void sensorTask(void * obj); 
-    
+	static void sensorTask(void * obj);
+
+    // Streaming public API (Fixed 215 Hz - no configuration needed)
+    static void enableStreaming();
+    static void disableStreaming();
+    static bool isStreaming();
+    static void streamingTask(void* parameters);
+    static int getAvailableSamples();
+    static void readStreamingSamples(int16_t* output, int count);
+
 };
 
 #endif

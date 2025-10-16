@@ -16,7 +16,8 @@ public:
     ~Bluetooth() = delete;
     static void init();
     static String readData();
-    static void sendData(String &data);
+    static bool sendData(String &data);
+    static bool sendRawData(const uint8_t* data, size_t length);  // NEW: Binary protocol support
     static bool isConnected();
 	static void waitForConnection();
 };

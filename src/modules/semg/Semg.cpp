@@ -18,6 +18,14 @@ TimerHandle_t Semg::ledTriggerTimer = NULL;
 TaskHandle_t Semg::task_handle = NULL;
 const float Semg::sampling_period_ms = SEMG_SAMPLING_PERIOD;
 
+// Streaming variables - BINARY PROTOCOL (Fixed 215 Hz)
+int16_t Semg::streaming_buffer[STREAMING_BUFFER_SIZE] = {0};
+volatile int Semg::buffer_write_index = 0;
+volatile int Semg::buffer_read_index = 0;
+volatile bool Semg::streaming_active = false;
+TaskHandle_t Semg::streaming_task_handle = NULL;
+unsigned long Semg::streaming_start_time = 0;
+
 Led LED_TRIGGER(LED_PIN_TRIGGER);
 
 
@@ -27,14 +35,11 @@ void Semg::init() {
     pinMode(SEMG_ENABLE_PIN, OUTPUT);
     Semg::enableSensor();
 
-    //Semg::disableSensor();
 	LED_TRIGGER.set(false);
     Semg::createLedTriggerTimer();
 }
 void Semg::startLedTrigger(){
-    //turn on led
     LED_TRIGGER.set(true);
-    //start o timer
     xTimerStart(Semg::ledTriggerTimer, 0);
 }
 
@@ -78,13 +83,8 @@ bool Semg::isTrigger() {
 
 	if (trigger) {
 		ESP_LOGI(TAG_SEMG, "==== Trigger detected ====");
-		//vTaskSuspend(MessageHandler::task_handle);
         Semg::sendTriggerMessage();
         Semg::startLedTrigger();
-        //Gyroscope::sendLastValue();
-        //vTaskResume(MessageHandler::task_handle);
-        //LED_TRIGGER.set(true);
-		//LED_TRIGGER.turnOnFor(2000);
 	}
     return trigger;
 }
@@ -102,8 +102,11 @@ bool Semg::impedanceTooLow() {
 }
 
 void Semg::samplingCallback(TimerHandle_t xTimer) {
-	//vTaskSuspend(Session::task_handle);
-    vTaskResume(Semg::task_handle);
+	// Only used for Session mode (FES trigger detection)
+    // Streaming mode uses ADC continuous mode instead
+    if (Session::status.ongoing) {
+        vTaskResume(Semg::task_handle);
+    }
 }
 
 void Semg::ledTriggerCallback(TimerHandle_t xTimer) {
@@ -116,6 +119,7 @@ void Semg::filterSamplesArray() {
         Semg::filtered_value[i] = SemgFilter::filter(Semg::filtered_value[i]);
     }
 }
+
 void Semg::createLedTriggerTimer(){
     if (ledTriggerTimer == NULL) {
         ledTriggerTimer = xTimerCreate(
@@ -140,8 +144,12 @@ void Semg::createLedTriggerTimer(){
     }
 
 }
+
 void Semg::startSamplingTimer() {
 	//ESP_LOGI(TAG_SEMG, "Starting sampling timer");
+    
+    SemgFilter::updateSamplingRate(2, 10, 40);
+
     if (samplingTimer == NULL) {
         samplingTimer = xTimerCreate(
             "sEMG timer",           // Nome do temporizador (para fins de depuração)
@@ -163,6 +171,7 @@ void Semg::startSamplingTimer() {
     }
     //ESP_LOGE(TAG_SEMG, "Aquiiiiiiiiiii!");
 }
+
 
 void Semg::sensorTask(void * obj) {
 	while(true) {
@@ -196,7 +205,6 @@ float Semg::getFilteredSample() {
 	
 	for (int i = 0; i < SEMG_SAMPLES_PER_VALUE; i++) {
 		filtered_value[i] = raw_value[i];
-        //Serial.println(filtered_value[i]);
 	}
 
 	
@@ -231,13 +239,11 @@ float Semg::acquireAverage(int readings_amount) {
 	Semg::sample_amount = 0;
     
     for (int i = 0; i < readings_amount; i++) {
-        Semg::output += Semg::getFilteredSample();
+        Semg::output += abs(Semg::getFilteredSample());
     }
     
     Semg::output /= (float)readings_amount;
-    //Serial.print("output>");
-    //Serial.println(Semg::output);
-    
+
     return Semg::output;
 }
 
@@ -270,6 +276,220 @@ void Semg::enableSensor() {
 
 void Semg::disableSensor() {
     digitalWrite(SEMG_ENABLE_PIN, LOW);
+}
+
+// ============================================================================
+// STREAMING IMPLEMENTATION
+// ============================================================================
+
+/**
+ * @brief Convert float voltage to int16_t for binary protocol
+ *
+ * Maps ADC range (0-4.096V) to ±4096 integer range
+ * Preserves millivolt precision: 1 LSB = 1 mV
+ *
+ * @param value ADC voltage in volts
+ * @return int16_t value clamped to ±4096 range
+ */
+int16_t Semg::floatToInt16(float value) {
+    // Clamp to valid range
+    if (value > VALUE_RANGE_MAX) value = VALUE_RANGE_MAX;
+    if (value < VALUE_RANGE_MIN) value = VALUE_RANGE_MIN;
+
+    return (int16_t)value;
+}
+
+
+void Semg::enableStreaming() {
+    // Reset buffer
+    buffer_write_index = 0;
+    buffer_read_index = 0;
+    streaming_active = true;
+    streaming_start_time = millis();
+
+    // Configure Butterworth filter for 215 Hz sampling
+    float sampling_time_ms = 1000.0f / SEMG_FIXED_RATE_HZ;
+    SemgFilter::updateSamplingRate(sampling_time_ms, 10, 50, false);
+    SemgFilter::resetState();
+
+    // Start ADC continuous mode (860 Hz → 215 Hz with 4x downsample)
+    Adc::startContinuousMode(SEMG_ADC_PIN);
+
+    // Create streaming task on Core 1
+    BaseType_t result = xTaskCreatePinnedToCore(
+        Semg::streamingTask,
+        "sEMG Streaming",
+        4096,
+        NULL,
+        15,  // Priority (higher than most, lower than MessageHandler)
+        &streaming_task_handle,
+        1    // Core 1
+    );
+
+    if (result != pdPASS) {
+		ESP_LOGE(TAG_SEMG, "Failed to create streaming task (error: %d)", result);
+        streaming_active = false;
+        Adc::stopContinuousMode();
+    }
+}
+
+void Semg::disableStreaming() {
+    streaming_active = false;
+
+    // Stop ADC continuous mode
+    Adc::stopContinuousMode();
+
+    // Delete streaming task if it exists
+    if (streaming_task_handle != NULL) {
+        vTaskDelete(streaming_task_handle);
+        streaming_task_handle = NULL;
+    }
+}
+
+bool Semg::isStreaming() {
+    return streaming_active;
+}
+
+int Semg::getAvailableSamples() {
+    // Calculate available samples in circular buffer
+    // Use critical section to avoid race conditions with ISR
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL(&mux);
+    int write = buffer_write_index;
+    int read = buffer_read_index;
+    portEXIT_CRITICAL(&mux);
+
+    if (write >= read) {
+        return write - read;
+    } else {
+        return (STREAMING_BUFFER_SIZE - read) + write;
+    }
+}
+
+void Semg::readStreamingSamples(int16_t* output, int count) {
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    for (int i = 0; i < count; i++) {
+        portENTER_CRITICAL(&mux);
+        output[i] = streaming_buffer[buffer_read_index];
+        buffer_read_index = (buffer_read_index + 1) % STREAMING_BUFFER_SIZE;
+        portEXIT_CRITICAL(&mux);
+    }
+}
+
+void Semg::writeToBuffer(int16_t value) {
+    portMUX_TYPE mux = portMUX_INITIALIZER_UNLOCKED;
+    portENTER_CRITICAL_ISR(&mux);
+
+    streaming_buffer[buffer_write_index] = value;
+    buffer_write_index = (buffer_write_index + 1) % STREAMING_BUFFER_SIZE;
+
+    // Check for buffer overflow (write catching up to read)
+    if (buffer_write_index == buffer_read_index) {
+        // Buffer full - drop oldest sample
+        buffer_read_index = (buffer_read_index + 1) % STREAMING_BUFFER_SIZE;
+
+        // Log overflow (but limit frequency to avoid log spam)
+        static unsigned long last_overflow_log = 0;
+        if (millis() - last_overflow_log > 1000) {
+            ESP_LOGW(TAG_SEMG, "Streaming buffer overflow! Dropping oldest samples.");
+            last_overflow_log = millis();
+        }
+    }
+
+    portEXIT_CRITICAL_ISR(&mux);
+}
+
+
+/**
+ * @brief Send streaming data via BINARY protocol (NEW - Option B)
+ *
+ * Packet Structure:
+ *   Header (8 bytes): magic | code | timestamp | sample_count
+ *   Data (100 bytes): int16_t[50]
+ *   Total: 108 bytes (vs 282 bytes JSON = 72% reduction)
+ *
+ * @param samples Array of int16_t values
+ * @param count Number of samples
+ * @return true if sent successfully
+ */
+bool Semg::sendBinaryStreamingMessage(int16_t* samples, int count) {
+    // Calculate packet size
+    const int packet_size = sizeof(BinaryPacketHeader) + (count * sizeof(int16_t));
+
+    // Allocate buffer on stack (108 bytes max)
+    uint8_t buffer[MAX_BINARY_PACKET_SIZE];
+
+    // Build header
+    BinaryPacketHeader* header = (BinaryPacketHeader*)buffer;
+    header->magic = PACKET_MAGIC_BYTE;
+    header->message_code = PACKET_MESSAGE_CODE_STREAM_DATA;
+    header->timestamp = millis();
+    header->sample_count = count;
+
+    // Copy data payload
+    memcpy(buffer + sizeof(BinaryPacketHeader), samples, count * sizeof(int16_t));
+
+    // Send raw binary data via Bluetooth
+    return Bluetooth::sendRawData(buffer, packet_size);
+}
+
+void Semg::streamingTask(void* parameters) {
+    int16_t samples[SEMG_SAMPLES_PER_PACKET];
+    int packet_count = 0;
+    unsigned long samples_processed = 0;
+
+    while (streaming_active) {
+        // Check timeout (10 minutes)
+        unsigned long elapsed_minutes = (millis() - streaming_start_time) / 60000;
+        if (elapsed_minutes >= STREAMING_TIMEOUT_MINUTES) {
+			ESP_LOGW(TAG_SEMG, "Streaming timeout reached (%d minutes), stopping...", STREAMING_TIMEOUT_MINUTES);
+            Semg::disableStreaming();
+            break;
+        }
+
+        // Poll ADC for new averaged sample (215 Hz output from 860 Hz ADC)
+        if (Adc::hasNewSample()) {
+            // Get averaged sample (already downsampled 4x by ADC task)
+            int16_t raw_sample = Adc::getLastSample();
+
+            // Apply Butterworth filter (10-50 Hz bandpass) + Notch 60 Hz
+            float filtered = SemgFilter::filterWithNotch((float)raw_sample);
+
+            // Print filtered value to serial for verification (215 Hz)
+            Serial.println(filtered);
+
+            // Convert to int16_t and write to circular buffer
+            int16_t final_sample = floatToInt16(filtered);
+            writeToBuffer(final_sample);
+            samples_processed++;
+        }
+
+        // Check if enough samples are available for packet transmission
+        int available = getAvailableSamples();
+        if (available >= SEMG_SAMPLES_PER_PACKET) {
+            // Read samples from buffer
+            readStreamingSamples(samples, SEMG_SAMPLES_PER_PACKET);
+
+            // Send via Bluetooth (binary protocol)
+            if (Bluetooth::isConnected()) {
+                bool sent = sendBinaryStreamingMessage(samples, SEMG_SAMPLES_PER_PACKET);
+                if (sent) {
+                    packet_count++;
+                } else {
+					ESP_LOGW(TAG_SEMG, "Failed to send packet #%d, retrying next cycle", packet_count + 1);
+                }
+            } else {
+				ESP_LOGW(TAG_SEMG, "Bluetooth disconnected, stopping streaming");
+                Semg::disableStreaming();
+                break;
+            }
+        }
+
+        // Yield CPU (adaptive delay based on buffer fullness)
+        vTaskDelay(pdMS_TO_TICKS(available < 10 ? 10 : 1));
+    }
+
+    vTaskDelete(NULL);
 }
 
 

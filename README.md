@@ -1,9 +1,23 @@
-# neurax_microcontroller
+# InteroperableResearchsEMGDevice
 
 ![C++](https://img.shields.io/badge/c++-%2300599C.svg?style=for-the-badge&logo=c%2B%2B&logoColor=white)
 ![Espressif](https://img.shields.io/badge/espressif-E7352C.svg?style=for-the-badge&logo=espressif&logoColor=white)
 
-This is the firmware for an electrostimulation device. Check out the [project page here](https://dynamic-vacuum-96a.notion.site/NeuraEstimulator-Blog-5549a27e7c814812b0851a2f0c69d579?pvs=4).
+ESP32-based sEMG (surface electromyography) device with FES (Functional Electrical Stimulation) capabilities for the PRISM research framework.
+
+## 📡 Real-Time sEMG Streaming
+
+The firmware supports high-speed sEMG data streaming via **binary protocol** over Bluetooth:
+
+- **215 Hz sampling rate** (fixed, hardware-optimized)
+- **50 samples per packet** (~230ms latency)
+- **108 bytes per packet** (72% smaller than JSON)
+- **48% bandwidth usage** @ 9600 baud (comfortable margin)
+
+For implementation details, see:
+- **Full documentation**: [`docs/api/bluetooth-protocol.md`](./docs/api/bluetooth-protocol.md)
+- **Quick reference**: [`docs/api/streaming-protocol.md`](./docs/api/streaming-protocol.md)
+- **Data capture guide**: [`docs/guides/data-capture.md`](./docs/guides/data-capture.md)
 
 ## Configuration values
 
@@ -60,8 +74,68 @@ Available configurations are:
 | SEMG_SAMPLES_PER_VALUE                  | 50            |                 |
 | SEMG_SAMPLES_PER_AVERAGE                | 10            |                 |
 | SEMG_LOW_IMPEDANCE_THRESHOLD            | 10            | Voltage above which the impedance is considered too low. Value in Volts.|
-| SEMG_TRIGGER_THRESHOLD_MINIMUM            | 3            | |
+| SEMG_TRIGGER_THRESHOLD_MINIMUM          | 3             | Minimum trigger threshold voltage. |
 
+| Streaming configurations                | Default Value | Explanation     |
+|-----------------------------------------|---------------|-----------------|
+| STREAMING_BUFFER_SIZE                   | 512           | Circular buffer size for streaming samples (int16_t values). |
+| MAX_SAMPLES_PER_PACKET                  | 50            | Number of samples per binary packet. |
+| SEMG_FIXED_RATE_HZ                      | 215           | Fixed sampling rate in Hz (860 Hz ADC ÷ 4 downsample). |
+| STREAMING_TIMEOUT_MINUTES               | 10            | Automatic streaming stop timeout in minutes. |
 
-# Libraries
-Besides FreeRTOS, the [Filters library](https://github.com/MartinBloedorn/libFilter) was also used.
+## 🛠️ Build and Upload
+
+```bash
+# Build firmware
+pio run
+
+# Upload to ESP32 (auto-detect port)
+pio run --target upload
+
+# Open serial monitor
+pio device monitor
+
+# Build, upload, and monitor
+pio run --target upload && pio device monitor
+```
+
+**Important:** Per project policy, firmware compilation and upload must be done manually by the user.
+
+## 🧪 Testing Bluetooth Streaming
+
+### **Automatic Test (Recommended)**
+
+```bash
+# Install dependencies (simple!)
+pip install pyserial matplotlib numpy scipy
+
+# Pair device in Bluetooth settings (one-time)
+# Windows: Settings → Bluetooth → Add "NeuroEstimulator"
+# Linux: bluetoothctl → pair & connect
+
+# Run automatic capture (auto-detects port, captures 10s)
+python capture_bluetooth_simple.py
+```
+
+### **What it does:**
+- ✅ Auto-detects "NeuroEstimulator" COM port
+- ✅ Connects via Bluetooth (serial SPP)
+- ✅ Captures 10 seconds @ 215 Hz
+- ✅ Generates plots + CSV
+- ✅ Disconnects automatically
+
+**For detailed instructions**, see: **[BLUETOOTH_TEST_GUIDE.md](./BLUETOOTH_TEST_GUIDE.md)**
+
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](./docs/) directory:
+- **[docs/README.md](./docs/README.md)** - Documentation index
+- **[CLAUDE.md](./CLAUDE.md)** - AI assistant development guide
+- **[CHANGELOG.md](./CHANGELOG.md)** - Version history
+
+## 📦 Dependencies
+
+- **FreeRTOS** - Real-time operating system (included with ESP32)
+- **[libFilter](https://github.com/MartinBloedorn/libFilter)** - Digital signal processing library (git submodule)
+- **ArduinoJson** - JSON serialization (via PlatformIO)
+- **Adafruit ADS1X15** - ADC driver (via PlatformIO)

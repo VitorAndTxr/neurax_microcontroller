@@ -7,17 +7,65 @@ This documentation covers the sEMG/FES device firmware for the PRISM project.
 - **[Main README](../README.md)** - Project overview and quick start
 - **[CLAUDE.md](../CLAUDE.md)** - AI assistant guidance and development reference
 - **[CHANGELOG](../CHANGELOG.md)** - Version history and changes
+- **[INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)** - PRISM ecosystem integration and data flow
 
 ---
 
 ## Documentation Structure
 
+### 🔗 Integration Documentation
+
+- **[INTEGRATION_GUIDE.md](./INTEGRATION_GUIDE.md)** - Complete guide to NeuroEstimulator integration within PRISM ecosystem
+  - Data flow architecture (therapeutic sessions and streaming)
+  - Component integration details (mobile app, research nodes)
+  - HL7 FHIR compliance and SNOMED CT coding
+  - Safety architecture and security considerations
+  - Session data model and federation patterns
+  - Testing scenarios and troubleshooting guide
+
+- **[DEVICE_NODE_PROTOCOL_REFERENCE.md](./DEVICE_NODE_PROTOCOL_REFERENCE.md)** - Quick reference for developers
+  - Device ↔ Mobile App Bluetooth protocol (SPP, JSON)
+  - Mobile App ↔ Research Node HTTPS/REST (4-phase handshake)
+  - HL7 FHIR payload structure and validation
+  - Error handling and security best practices
+  - Performance metrics and testing checklist
+
 ### 📡 API Documentation (`/api`)
 
 Communication protocols and message formats:
 
+**📋 [BLUETOOTH_PROTOCOL_UPDATE_SUMMARY.md](api/BLUETOOTH_PROTOCOL_UPDATE_SUMMARY.md)** - What's new in Bluetooth protocol documentation (Oct 2025)
+- Summary of all updates and improvements
+- Before/after comparison
+- Documentation statistics and coverage matrix
+- Usage recommendations for different roles
+
+- **[PROTOCOL_DOCUMENTATION_GUIDE.md](api/PROTOCOL_DOCUMENTATION_GUIDE.md)** - 📚 **START HERE** - Navigation guide for all protocol documentation
+  - Decision tree to find the right document for your role
+  - Reading paths for mobile developers, backend engineers, firmware developers, QA, and researchers
+  - Cross-references between documents
+  - FAQ and document relationships
+
+- **[COMPLETE_BLUETOOTH_PROTOCOL.md](api/COMPLETE_BLUETOOTH_PROTOCOL.md)** - ⭐ **COMPREHENSIVE REFERENCE** (v2.0)
+  - Complete protocol architecture and dual-protocol system
+  - All 14 message codes with detailed specifications
+  - JSON command/control protocol (start/stop, parameters, status)
+  - Binary streaming protocol (215 Hz, optimized bandwidth)
+  - Security, authentication, and error handling
+  - Testing guide (4 test cases) and troubleshooting
+  - State machines and timeout management
+  - Firmware version compatibility matrix
+
 - **[bluetooth-protocol.md](api/bluetooth-protocol.md)** - Binary streaming protocol specification (v1.1, 215 Hz)
+  - Packet structure and decoding implementation
+  - Python, JavaScript, and C/C++ decoder examples
+  - Validation tests and performance benchmarks
+  - Troubleshooting guide
+
 - **[streaming-protocol.md](api/streaming-protocol.md)** - Quick reference for 215 Hz streaming
+  - TL;DR quick reference card (5-minute read)
+  - Python and JavaScript minimal decoders
+  - Configuration commands and performance metrics
 
 ### 🏗️ Architecture (`/architecture`)
 

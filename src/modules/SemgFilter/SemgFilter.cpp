@@ -44,7 +44,7 @@ float SemgFilter::filterWithNotch(float value)
     // Then apply notch filter to remove 60 Hz interference
     value = SemgFilter::notch_60hz.filterIn(value);
 
-    value = value * 10;
+    value = value ;
     return value;
 }
 

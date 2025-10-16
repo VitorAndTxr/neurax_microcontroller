@@ -452,10 +452,10 @@ void Semg::streamingTask(void* parameters) {
             // Get averaged sample (already downsampled 4x by ADC task)
             int16_t raw_sample = Adc::getLastSample();
 
-            // Apply Butterworth filter (10-50 Hz bandpass + 60 Hz notch)
-            float filtered = SemgFilter::filter((float)raw_sample);
+            // Apply Butterworth filter (10-50 Hz bandpass) + Notch 60 Hz
+            float filtered = SemgFilter::filterWithNotch((float)raw_sample);
 
-            // Print filtered value to serial (215 Hz)
+            // Print filtered value to serial for verification (215 Hz)
             Serial.println(filtered);
 
             // Convert to int16_t and write to circular buffer

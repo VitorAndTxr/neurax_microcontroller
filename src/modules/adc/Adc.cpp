@@ -142,9 +142,6 @@ void Adc::adcTaskLoop(void* parameters) {
 
     ESP_LOGI(TAG_ADC, "Continuous mode started on channel %d", channel);
 
-    // Debug: Print first 10 raw readings to verify ADC is working
-    unsigned long debug_samples = 0;
-
     while (true) {
         // Measure ADC read time
         unsigned long read_start = micros();
@@ -153,13 +150,6 @@ void Adc::adcTaskLoop(void* parameters) {
         int16_t raw_value = ads.getLastConversionResults();
 
         unsigned long read_duration = micros() - read_start;
-
-        // Debug: Print first 10 readings
-        if (debug_samples < 10) {
-            Serial.printf("[ADC] Sample #%lu: raw=%d (%.4fV), read_time=%lu us\n",
-                          debug_samples + 1, raw_value, raw_value * 0.0001875f, read_duration);
-            debug_samples++;
-        }
 
         // Track timing stats
         total_read_time_us += read_duration;
@@ -196,12 +186,6 @@ void Adc::adcTaskLoop(void* parameters) {
                 write_index = (write_index + 1) % ADC_CIRCULAR_BUFFER_SIZE;
                 available_samples++;
                 samples_written_to_buffer++;
-
-                // Debug: Print first 5 averaged values written to buffer
-                if (samples_written_to_buffer <= 5) {
-                    Serial.printf("[ADC] Averaged #%d written to buffer: %d (avg of 4 samples)\n",
-                                  samples_written_to_buffer, averaged_value);
-                }
             }
             // Note: If buffer full, sample is dropped (overflow protection)
 

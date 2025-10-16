@@ -168,7 +168,7 @@ To:
 
 ### Documentation Updates
 
-- Updated `CONTINUOUS_MODE_IMPLEMENTATION_PLAN.md` status to "COMPLETE"
+- Updated `docs/development/continuous-mode.md` to reflect completion
 - Updated `StreamingProtocol.h` header documentation
 - Updated `platformio.ini` comments
 
@@ -204,8 +204,8 @@ This release introduces a **breaking change** to the streaming protocol. The fir
   - Preserves millivolt precision (1 LSB = 1 mV)
 
 - **Documentation**
-  - Comprehensive protocol specification: `docs/BINARY_STREAMING_PROTOCOL.md`
-  - Quick reference guide: `docs/QUICK_REFERENCE_BINARY_PROTOCOL.md`
+  - Comprehensive protocol specification: `docs/api/bluetooth-protocol.md`
+  - Quick reference guide: `docs/api/streaming-protocol.md`
   - Python, JavaScript, and C++ decoder examples
   - Test vectors and validation procedures
 
@@ -324,18 +324,19 @@ pio run --target upload
 ```
 
 **Mobile App** (critical):
-1. Read [`docs/BINARY_STREAMING_PROTOCOL.md`](./docs/BINARY_STREAMING_PROTOCOL.md)
+1. Read [`docs/api/bluetooth-protocol.md`](./docs/api/bluetooth-protocol.md)
 2. Implement `BinaryStreamDecoder` class
 3. Update Bluetooth data handler to detect binary packets (magic byte 0xAA)
 4. Convert int16 → float voltage values
 5. Test with test vectors provided in documentation
 
 **Optional Optimizations**:
-- Upgrade Bluetooth module to 115200 baud (enables up to 800 Hz streaming)
-- Implement delta encoding for further 50% bandwidth reduction
+- Upgrade Bluetooth module to 115200 baud (enables higher bandwidth margin)
+- Implement delta encoding for further bandwidth reduction
 
 ---
 
 For detailed implementation examples, see:
-- [Full Protocol Documentation](./docs/BINARY_STREAMING_PROTOCOL.md)
-- [Quick Reference](./docs/QUICK_REFERENCE_BINARY_PROTOCOL.md)
+- [Full Protocol Documentation](./docs/api/bluetooth-protocol.md)
+- [Quick Reference](./docs/api/streaming-protocol.md)
+- [Data Capture Guide](./docs/guides/data-capture.md)

@@ -1,10 +1,10 @@
 # Binary Streaming Protocol - Implementation Guide
 
-**Version**: 1.0
-**Date**: 2025-10-14
-**Target Rate**: 250 Hz
+**Version**: 1.1
+**Date**: 2025-10-16
+**Target Rate**: 215 Hz (fixed, hardware-optimized)
 **Packet Size**: 108 bytes
-**Bandwidth**: 530 bytes/s @ 9600 baud (55% utilization)
+**Bandwidth**: 464 bytes/s @ 9600 baud (48% utilization)
 
 ---
 
@@ -29,9 +29,9 @@ The **Binary Streaming Protocol** replaces the previous JSON-based streaming to 
 | Metric | JSON Protocol | Binary Protocol | Improvement |
 |--------|---------------|-----------------|-------------|
 | Packet Size | 282 bytes | **108 bytes** | **-62%** |
-| Bandwidth @ 250 Hz | 2025 bytes/s (211%) | **530 bytes/s (55%)** | **-74%** |
-| Max Rate @ 9600 baud | ~100 Hz | **250 Hz** | **+150%** |
-| Latency | 100ms | 200ms | Acceptable for data logging |
+| Bandwidth @ 215 Hz | ~1800 bytes/s (187%) | **464 bytes/s (48%)** | **-74%** |
+| Max Rate @ 9600 baud | ~100 Hz | **215 Hz** | **+115%** |
+| Latency | 100ms | 230ms | Acceptable for data logging |
 
 ### Use Cases
 
@@ -47,45 +47,30 @@ The **Binary Streaming Protocol** replaces the previous JSON-based streaming to 
 ### Communication Flow
 
 ```
-Mobile App → ESP32: {"cd":14,"mt":"w","bd":{"rate":250,"type":"raw"}}  (Configure)
-ESP32 → App:        {"cd":14,"mt":"a"}                                   (ACK)
-
 Mobile App → ESP32: {"cd":11,"mt":"x"}                                   (Start)
 ESP32 → App:        {"cd":11,"mt":"a"}                                   (ACK)
 
 ESP32 → App:        [Binary Packet 1] (108 bytes)
 ESP32 → App:        [Binary Packet 2] (108 bytes)
 ESP32 → App:        [Binary Packet 3] (108 bytes)
-...                 (5 packets/second @ 250 Hz)
+...                 (~4.3 packets/second @ 215 Hz)
 
 Mobile App → ESP32: {"cd":12,"mt":"x"}                                   (Stop)
 ESP32 → App:        {"cd":12,"mt":"a"}                                   (ACK)
 ```
 
-### Configuration Parameters
+### Fixed Configuration
 
-**Message Code 14** - Configure Streaming:
-```json
-{
-  "cd": 14,
-  "mt": "w",
-  "bd": {
-    "rate": 250,           // Sampling rate in Hz (10-500)
-    "type": "raw"          // "raw", "filtered", or "rms"
-  }
-}
-```
+**Firmware v3.0+** uses a **fixed 215 Hz configuration** for optimal performance:
 
-**Supported Rates**:
-- **10-30 Hz**: Optimal for 9600 baud (low latency)
-- **50-100 Hz**: Good for 9600 baud (balanced)
-- **150-250 Hz**: Requires careful buffer management @ 9600 baud
-- **250-500 Hz**: Recommended to upgrade Bluetooth to 115200 baud
+- **Sampling Rate**: 215 Hz (860 Hz ADC ÷ 4 downsample)
+- **Data Type**: Filtered (Butterworth 10-50 Hz bandpass + 60 Hz notch)
+- **Samples per Packet**: 50
+- **Bandwidth**: 464 bytes/s (48% of 9600 baud)
 
-**Data Types**:
-- `"raw"`: ADC voltage values (0-4.096V)
-- `"filtered"`: Butterworth bandpass (10-50 Hz) + Notch (60 Hz)
-- `"rms"`: RMS envelope (absolute values)
+**Configuration message (code 14) is no longer supported** - the system automatically uses optimal settings.
+
+**Note**: For firmware v2.x (configurable streaming), see [CHANGELOG.md](../../CHANGELOG.md) for migration guide
 
 ---
 
@@ -671,8 +656,8 @@ def test_partial_packet():
 
 ### Performance Benchmarks
 
-**Target Metrics @ 250 Hz**:
-- Packet rate: 5 packets/second
+**Target Metrics @ 215 Hz**:
+- Packet rate: ~4.3 packets/second
 - Latency: <300ms (packet processing + transmission)
 - Packet loss: <1%
 - CPU usage: <10% (mobile device)
@@ -692,7 +677,7 @@ class StreamMonitor:
 
         # Check for packet loss (timestamp gaps)
         if self.last_timestamp > 0:
-            expected_gap = 200  # 50 samples @ 250 Hz = 200ms
+            expected_gap = 232  # 50 samples @ 215 Hz = 232ms
             actual_gap = packet.timestamp_ms - self.last_timestamp
             if abs(actual_gap - expected_gap) > 50:
                 print(f"⚠️ Timestamp gap: {actual_gap}ms (expected {expected_gap}ms)")
@@ -703,7 +688,7 @@ class StreamMonitor:
         elapsed = time.time() - self.start_time
         if elapsed >= 10.0:
             rate = self.packet_count / elapsed
-            print(f"📊 Packet rate: {rate:.1f} pkts/sec (target: 5.0)")
+            print(f"📊 Packet rate: {rate:.1f} pkts/sec (target: 4.3)")
             self.packet_count = 0
             self.start_time = time.time()
 ```
@@ -775,9 +760,9 @@ asyncio.create_task(process_packet(packets[0]))
 ### Configuration Constants
 
 ```cpp
-#define STREAMING_BUFFER_SIZE 300
+#define STREAMING_BUFFER_SIZE 512
 #define MAX_SAMPLES_PER_PACKET 50
-#define DEFAULT_STREAMING_RATE 250
+#define SEMG_FIXED_RATE_HZ 215
 #define PACKET_MAGIC_BYTE 0xAA
 #define PACKET_MESSAGE_CODE_STREAM_DATA 13
 ```
@@ -791,6 +776,7 @@ For implementation questions or issues, refer to:
 
 ---
 
-**Document Version**: 1.0
-**Last Updated**: 2025-10-14
+**Document Version**: 1.1
+**Last Updated**: 2025-10-16
 **Author**: PRISM Development Team
+**Firmware Compatibility**: v3.0+ (215 Hz fixed rate)

@@ -30,7 +30,7 @@ void setup() {
 
 	esp_log_level_set("*", ESP_LOG_INFO);
 	esp_log_system_timestamp();
-	ESP_LOGI(TAG_MAIN, "Iniciando firmware NeuroEstimulator...");
+	ESP_LOGI(TAG_MAIN, "Starting NeuroEstimulator firmware...");
 
 	Serial.println("[MAIN] Initializing Gyroscope...");
 	Gyroscope::init();

@@ -16,8 +16,8 @@ This documentation covers the sEMG/FES device firmware for the PRISM project.
 
 Communication protocols and message formats:
 
-- **[bluetooth-protocol.md](api/bluetooth-protocol.md)** - Binary streaming protocol specification (v1.0)
-- **[streaming-protocol.md](api/streaming-protocol.md)** - Quick reference for 215Hz streaming
+- **[bluetooth-protocol.md](api/bluetooth-protocol.md)** - Binary streaming protocol specification (v1.1, 215 Hz)
+- **[streaming-protocol.md](api/streaming-protocol.md)** - Quick reference for 215 Hz streaming
 
 ### 🏗️ Architecture (`/architecture`)
 
@@ -30,8 +30,8 @@ System design and data flow:
 Technical analysis and implementation details:
 
 - **[adc-analysis.md](development/adc-analysis.md)** - ADC performance analysis (ADS1115 @ 860 SPS)
-- **[continuous-mode.md](development/continuous-mode.md)** - Continuous ADC sampling implementation plan
-- **[bugfixes.md](development/bugfixes.md)** - Circular buffer overflow fix documentation
+- **[continuous-mode.md](development/continuous-mode.md)** - Continuous ADC sampling implementation plan (COMPLETED in v3.0.0)
+- **[bugfixes.md](development/bugfixes.md)** - Sample loss fix with circular buffer (v3.1.0)
 
 ### 📖 User Guides (`/guides`)
 
@@ -123,10 +123,11 @@ All hardware parameters are configured via `platformio.ini`:
 |-----------|---------|-------------|
 | `SEMG_ADC_PIN` | 0 | ADC channel for sEMG |
 | `ADC_DOWNSAMPLE_RATIO` | 4 | 860 Hz → 215 Hz |
-| `STREAMING_BUFFER_SIZE` | 300 | Circular buffer size |
+| `STREAMING_BUFFER_SIZE` | 512 | Circular buffer size |
 | `SEMG_FILTER_LOW_CUTOFF_FREQUENCY` | 10.0 | Butterworth low cutoff (Hz) |
 | `SEMG_FILTER_HIGH_CUTOFF_FREQUENCY` | 50.0 | Butterworth high cutoff (Hz) |
 | `FES_MODULE_ENABLE` | false | Enable/disable FES hardware |
+| `SEMG_FIXED_RATE_HZ` | 215 | Fixed sampling rate |
 
 See [`platformio.ini`](../platformio.ini) for full configuration.
 
@@ -134,9 +135,9 @@ See [`platformio.ini`](../platformio.ini) for full configuration.
 
 ## Version Information
 
-**Firmware Version**: v1.0.0
-**Protocol Version**: Binary v1.0
-**Documentation Updated**: 2025-01-15
+**Firmware Version**: v3.1.0 (current)
+**Protocol Version**: Binary v1.1 (215 Hz fixed rate)
+**Documentation Updated**: 2025-10-16
 
 ---
 

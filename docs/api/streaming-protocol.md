@@ -1,6 +1,6 @@
 # Binary Protocol - Quick Reference
 
-**TL;DR**: 250 Hz streaming @ 55% bandwidth (was 100 Hz @ 211% with JSON)
+**TL;DR**: 215 Hz streaming @ 48% bandwidth (fixed, hardware-optimized)
 
 ---
 
@@ -61,11 +61,12 @@ class Decoder {
 
 ## Configuration Commands
 
-### Start Streaming @ 250 Hz
+### Start Streaming (Fixed 215 Hz)
 ```json
-{"cd":14,"mt":"w","bd":{"rate":250,"type":"raw"}}
 {"cd":11,"mt":"x"}
 ```
+
+**Note**: Configuration message (code 14) is no longer supported in v3.0+. The system automatically uses the optimal 215 Hz fixed configuration.
 
 ### Stop Streaming
 ```json
@@ -78,10 +79,11 @@ class Decoder {
 
 | Metric | Value |
 |--------|-------|
-| Packet rate | 5 packets/s |
+| Sampling rate | 215 Hz (fixed) |
+| Packet rate | ~4.3 packets/s |
 | Packet size | 108 bytes |
-| Bandwidth | 540 bytes/s (56% @ 9600 baud) |
-| Latency | ~200ms |
+| Bandwidth | 464 bytes/s (48% @ 9600 baud) |
+| Latency | ~230ms |
 
 ---
 
@@ -98,7 +100,7 @@ class Decoder {
 - Filtered values can be negative
 
 ### Packet loss?
-- Monitor timestamp gaps (expect ~200ms)
+- Monitor timestamp gaps (expect ~232ms)
 - Check Bluetooth signal strength
 - Don't block receiver thread
 
@@ -117,13 +119,14 @@ class Decoder {
 
 ---
 
-## Files Changed
+## Files Changed (v3.0)
 
-- `platformio.ini` - Constants (250 Hz, 50 samples, 300 buffer)
+- `platformio.ini` - Fixed 215 Hz constants
+- `Adc.cpp/h` - Continuous mode with circular buffer
 - `StreamingProtocol.h` - Binary packet struct
-- `Semg.cpp` - Encoder + buffer (int16_t)
+- `Semg.cpp` - Simplified streaming (removed configuration)
 - `Bluetooth.cpp` - sendRawData() method
 
 ---
 
-For complete documentation, see [`BINARY_STREAMING_PROTOCOL.md`](./BINARY_STREAMING_PROTOCOL.md)
+For complete documentation, see [`bluetooth-protocol.md`](./bluetooth-protocol.md)

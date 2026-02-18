@@ -5,6 +5,33 @@ All notable changes to the NeuraEstimulator firmware will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.0] - 2026-02-17
+
+### Fixed - Streaming Lifecycle (Second Session Bug)
+
+**Issue**: Second sEMG streaming session produced no data. Device required physical restart between recording sessions.
+
+**Root Causes**:
+1. `Adc::stopContinuousMode()` called `vTaskDelete()` on the ADC task mid-I2C transaction, corrupting the I2C bus and making the ADS1115 unreachable on subsequent sessions
+2. `streamingTask` self-deleted via `vTaskDelete(NULL)` without clearing `streaming_task_handle`, leaving a dangling pointer
+3. `enableStreaming()` lacked an idempotency guard, risking duplicate FreeRTOS tasks
+
+**Solution**: Cooperative task shutdown pattern replacing unsafe `vTaskDelete()`.
+
+### Changed
+- **ADC Module** (`Adc.h`, `Adc.cpp`):
+  - Added `volatile bool continuous_active` flag for graceful task shutdown
+  - `adcTaskLoop()`: Replaced `while(true)` with `while(continuous_active)`, self-exits cleanly after I2C completes
+  - `stopContinuousMode()`: Signals flag → polls up to 50ms → force-deletes only as fallback; buffer reset moved to after task exit
+  - `startContinuousMode()`: Added idempotency guard (stops previous mode if active)
+
+- **Semg Module** (`Semg.cpp`):
+  - `streamingTask()`: Timeout and BT-disconnect paths now `break` out of loop instead of calling `disableStreaming()` (prevents self-deadlock); post-loop cleanup handles ADC stop + handle clear
+  - `disableStreaming()`: Cooperative shutdown — polls `streaming_task_handle == NULL` up to 100ms, force-deletes only as fallback
+  - `enableStreaming()`: Added idempotency guard — calls `disableStreaming()` if previous session not cleaned up
+
+---
+
 ## [3.1.0] - 2025-10-15
 
 ### 🐛 Critical Bug Fix - Sample Loss in Continuous Mode

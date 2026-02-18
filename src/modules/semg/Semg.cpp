@@ -301,6 +301,12 @@ int16_t Semg::floatToInt16(float value) {
 
 
 void Semg::enableStreaming() {
+    // Idempotency guard: clean up any stale streaming state
+    if (streaming_active || streaming_task_handle != NULL) {
+        ESP_LOGW(TAG_SEMG, "Previous streaming session not cleaned up, stopping first");
+        disableStreaming();
+    }
+
     // Reset buffer
     buffer_write_index = 0;
     buffer_read_index = 0;
@@ -336,13 +342,19 @@ void Semg::enableStreaming() {
 void Semg::disableStreaming() {
     streaming_active = false;
 
-    // Stop ADC continuous mode
-    Adc::stopContinuousMode();
+    // Wait for streaming task to self-exit (up to 100ms)
+    int timeout = 100;
+    while (streaming_task_handle != NULL && timeout-- > 0) {
+        vTaskDelay(pdMS_TO_TICKS(1));
+    }
 
-    // Delete streaming task if it exists
+    // Force-delete only if task didn't self-exit
     if (streaming_task_handle != NULL) {
+        ESP_LOGW(TAG_SEMG, "Streaming task did not self-exit, force deleting");
         vTaskDelete(streaming_task_handle);
         streaming_task_handle = NULL;
+        // ADC must also be stopped since post-loop cleanup didn't run
+        Adc::stopContinuousMode();
     }
 }
 
@@ -442,8 +454,8 @@ void Semg::streamingTask(void* parameters) {
         // Check timeout (10 minutes)
         unsigned long elapsed_minutes = (millis() - streaming_start_time) / 60000;
         if (elapsed_minutes >= STREAMING_TIMEOUT_MINUTES) {
-			ESP_LOGW(TAG_SEMG, "Streaming timeout reached (%d minutes), stopping...", STREAMING_TIMEOUT_MINUTES);
-            Semg::disableStreaming();
+            ESP_LOGW(TAG_SEMG, "Streaming timeout reached (%d minutes), stopping...", STREAMING_TIMEOUT_MINUTES);
+            streaming_active = false;
             break;
         }
 
@@ -476,11 +488,11 @@ void Semg::streamingTask(void* parameters) {
                 if (sent) {
                     packet_count++;
                 } else {
-					ESP_LOGW(TAG_SEMG, "Failed to send packet #%d, retrying next cycle", packet_count + 1);
+                    ESP_LOGW(TAG_SEMG, "Failed to send packet #%d, retrying next cycle", packet_count + 1);
                 }
             } else {
-				ESP_LOGW(TAG_SEMG, "Bluetooth disconnected, stopping streaming");
-                Semg::disableStreaming();
+                ESP_LOGW(TAG_SEMG, "Bluetooth disconnected, stopping streaming");
+                streaming_active = false;
                 break;
             }
         }
@@ -489,6 +501,9 @@ void Semg::streamingTask(void* parameters) {
         vTaskDelay(pdMS_TO_TICKS(available < 10 ? 10 : 1));
     }
 
+    // Post-loop cleanup: stop ADC and self-delete
+    Adc::stopContinuousMode();
+    streaming_task_handle = NULL;
     vTaskDelete(NULL);
 }
 

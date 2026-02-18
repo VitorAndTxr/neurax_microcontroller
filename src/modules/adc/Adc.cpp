@@ -16,6 +16,7 @@ volatile int Adc::read_index = 0;
 volatile int Adc::available_samples = 0;
 
 TaskHandle_t Adc::adc_task_handle = NULL;
+volatile bool Adc::continuous_active = false;
 
 void Adc::init() {
 #if ADC_MODULE_ENABLE
@@ -46,6 +47,10 @@ float Adc::getValue(int input) {
 // NEW: Start continuous mode with decimation (1 of 4 samples)
 void Adc::startContinuousMode(int channel) {
 #if ADC_MODULE_ENABLE
+    if (adc_task_handle != NULL) {
+        stopContinuousMode();
+    }
+
     // Reset decimation counter
     downsample_index = 0;
 
@@ -53,6 +58,8 @@ void Adc::startContinuousMode(int channel) {
     write_index = 0;
     read_index = 0;
     available_samples = 0;
+
+    continuous_active = true;
 
     // Create ADC task on Core 1 (communication core)
     // Pass channel as parameter
@@ -77,15 +84,25 @@ void Adc::startContinuousMode(int channel) {
 // NEW: Stop continuous mode
 void Adc::stopContinuousMode() {
 #if ADC_MODULE_ENABLE
-	ESP_LOGI(TAG_ADC, "Stopping continuous mode...");
+    ESP_LOGI(TAG_ADC, "Stopping continuous mode...");
+    continuous_active = false;
 
-    if (adc_task_handle != NULL) {
-        vTaskDelete(adc_task_handle);
-        adc_task_handle = NULL;
-		ESP_LOGI(TAG_ADC, "ADC task deleted");
+    // Wait for ADC task to exit cleanly (up to 50ms)
+    int timeout = 50;
+    while (adc_task_handle != NULL && timeout-- > 0) {
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 
-    // Reset circular buffer state
+    // Force-delete only if task didn't self-exit
+    if (adc_task_handle != NULL) {
+        ESP_LOGW(TAG_ADC, "ADC task did not self-exit, force deleting");
+        vTaskDelete(adc_task_handle);
+        adc_task_handle = NULL;
+    }
+
+    ESP_LOGI(TAG_ADC, "ADC task stopped");
+
+    // Reset circular buffer state AFTER task confirmed gone
     write_index = 0;
     read_index = 0;
     available_samples = 0;
@@ -142,7 +159,7 @@ void Adc::adcTaskLoop(void* parameters) {
 
     ESP_LOGI(TAG_ADC, "Continuous mode started on channel %d", channel);
 
-    while (true) {
+    while (continuous_active) {
         // Measure ADC read time
         unsigned long read_start = micros();
 
@@ -199,5 +216,8 @@ void Adc::adcTaskLoop(void* parameters) {
 
         // No delay - run as fast as ADC allows (~860 Hz)
     }
+
+    adc_task_handle = NULL;
+    vTaskDelete(NULL);
 #endif
 }

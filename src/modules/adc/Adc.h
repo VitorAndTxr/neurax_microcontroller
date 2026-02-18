@@ -29,6 +29,7 @@ private:
     static volatile int available_samples;
 
     static TaskHandle_t adc_task_handle;
+    static volatile bool continuous_active;
 
     // Private methods
     static void adcTaskLoop(void* parameters);
